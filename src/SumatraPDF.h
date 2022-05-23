@@ -160,7 +160,8 @@ struct LoadArgs {
     void SetFilePath(const char* path) {
         fileName.SetCopy(path);
     }
-
+    bool lazyload = false;
+    Controller* ctrl = nullptr;
   private:
     AutoFreeStr fileName;
 };

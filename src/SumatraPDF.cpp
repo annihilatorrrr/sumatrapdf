@@ -1543,7 +1543,7 @@ bool DocumentPathExists(const char* path) {
 // TODO: write me
 static WindowInfo* LoadDocumentNew(LoadArgs* args)
 {
-    AutoFreeWstr fullPath(path::Normalize(args.fileName));
+    AutoFreeWstr fullPath(path::Normalize(args->fileName));
     // TODO: try to find file on other drives if doesn't exist
 
     CrashIf(true);
@@ -1567,6 +1567,10 @@ static void scheduleReloadTab(TabInfo* tab) {
     });
 }
 
+const char* kindNotifLoading = "loading";
+
+WindowInfo* LoadDocumentFinish(LoadArgs* args, Controller* ctrl, bool lazyload);
+
 // TODO: eventually I would like to move all loading to be async. To achieve that
 // we need clear separatation of loading process into 2 phases: loading the
 // file (and showing progress/load failures in topmost window) and placing
@@ -1574,9 +1578,75 @@ static void scheduleReloadTab(TabInfo* tab) {
 // window or creating a new window for the document)
 WindowInfo* LoadDocument(LoadArgs* args, bool lazyload) {
     CrashAlwaysIf(gCrashOnOpen);
+    args->lazyload = lazyload;
 
     char* fullPath = path::NormalizeTemp(args->FilePath());
+
+    // TODO: for now ignoring lazyload
     WindowInfo* win = args->win;
+    if (win) {
+        AutoFreeStr msg(str::Format(_TRA("Loading %s ..."), fullPath));
+        NotificationCreateArgs nargs;
+        nargs.hwndParent = win->hwndCanvas;
+        nargs.groupId = kindNotifLoading;
+        nargs.msg = msg;
+        ShowNotification(nargs);
+        // display the notification ASAP (prefs::Save() can introduce a notable delay)
+        win->RedrawAll(true);
+    }
+
+    RunAsync([args] {
+        //auto timeStart = TimeGet();
+        Controller* ctrl = nullptr;
+        WindowInfo* win = args->win;
+        // TODO: ensure we have WindowInfo here
+        HwndPasswordUI pwdUI(win->hwndFrame ? win->hwndFrame : nullptr);
+        const char* fullPath = args->FilePath();
+        if (args->engine != nullptr) {
+            ctrl = CreateControllerForEngine(args->engine, fullPath, &pwdUI, win);
+        } else {
+            ctrl = CreateControllerForFile(fullPath, &pwdUI, win);
+        }
+        args->ctrl = ctrl;
+
+        uitask::Post([args]() {
+            Controller* ctrl = args->ctrl;
+            WindowInfo* win = args->win;
+
+            //auto durMs = TimeSinceInMs(timeStart);
+            if (!ctrl) {
+                // TODO: cancel notification and show error message notification
+                //logf("LoadDocument: failed to load '%s' in %.2f ms\n", fullPath, (float)durMs);
+                return;
+            }
+            if (ctrl) {
+                //int nPages = ctrl->PageCount();
+                //logf("LoadDocument: %.2f ms, %d pages for '%s'\n", (float)durMs, nPages, fullPath);
+            }
+
+            if (win && !args->ctrl) {
+                AutoFreeStr msg(str::Format(_TRA("Failed to load %s ..."), args->FilePath()));
+                NotificationCreateArgs nargs;
+                nargs.hwndParent = win->hwndCanvas;
+                nargs.groupId = kindNotifLoading;
+                nargs.warning = true;
+                nargs.msg = msg;
+                ShowNotification(nargs);
+                return;
+            }
+            if (win) {
+                RemoveNotificationsForGroup(win->hwndCanvas, kindNotifLoading);
+            }
+            LoadDocumentFinish(args, args->ctrl, args->lazyload);
+        });
+    });
+
+    return nullptr;
+}
+
+WindowInfo* LoadDocumentFinish(LoadArgs* args, Controller* ctrl, bool lazyload) {
+    WindowInfo* win = args->win;
+    char* fullPath = path::NormalizeTemp(args->FilePath());
 
     bool failEarly = win && !args->forceReuse && !DocumentPathExists(fullPath);
     // try to find inexistent files with history data
@@ -1643,26 +1713,8 @@ WindowInfo* LoadDocument(LoadArgs* args, bool lazyload) {
         }
     }
 
-    auto timeStart = TimeGet();
     HwndPasswordUI pwdUI(win->hwndFrame);
-    Controller* ctrl = nullptr;
     if (!lazyload) {
-        if (args->engine != nullptr) {
-            ctrl = CreateControllerForEngine(args->engine, fullPath, &pwdUI, win);
-        } else {
-            ctrl = CreateControllerForFile(fullPath, &pwdUI, win);
-        }
-
-        {
-            auto durMs = TimeSinceInMs(timeStart);
-            if (ctrl) {
-                int nPages = ctrl->PageCount();
-                logf("LoadDocument: %.2f ms, %d pages for '%s'\n", (float)durMs, nPages, fullPath);
-            } else {
-                logf("LoadDocument: failed to load '%s' in %.2f ms\n", fullPath, (float)durMs);
-            }
-        }
-
         if (!ctrl) {
             // TODO: same message as in Canvas.cpp to not introduce
             // new translation. Find a better message e.g. why failed.

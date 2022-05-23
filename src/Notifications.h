@@ -15,7 +15,7 @@ struct NotificationCreateArgs {
     HWND hwndParent = nullptr;
     Kind groupId = kNotifGroupActionResponse;
     bool warning = false;
-    int timeoutMs = 0; // if 0 => persists until closed manually
+    int timeoutMs = kNotifDefaultTimeOut; // if 0 => persists until closed manually
     const char* msg = nullptr;
     const char* progressMsg = nullptr;
     NotificationWndRemovedCallback onRemoved;
