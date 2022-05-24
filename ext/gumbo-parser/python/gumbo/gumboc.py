@@ -275,9 +275,7 @@ class Element(ctypes.Structure):
       if svg_tagname is not None:
         return str(svg_tagname)
     if self.tag == Tag.UNKNOWN:
-      if original_tag.data is None:
-        return ''
-      return str(original_tag).lower()
+      return '' if original_tag.data is None else str(original_tag).lower()
     return _tagname(self.tag)
 
   def __repr__(self):

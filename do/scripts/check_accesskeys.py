@@ -117,7 +117,7 @@ def main():
 
 	groups = {}
 	for file in trans_gen.C_FILES_TO_PROCESS:
-		groups.update(extract_accesskey_groups(file))
+		groups |= extract_accesskey_groups(file)
 
 	translations = open(trans_download.lastDownloadFilePath(), "rb").read()
 	translations = trans_download.parseTranslations(translations)

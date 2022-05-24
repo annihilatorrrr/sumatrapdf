@@ -30,26 +30,26 @@ def matchLine(line, regex, result=None):
 def parseBenchOutput(output):
 	result = {}
 	current, data = None, []
-	
+
 	for line in output.replace("\r", "\n").split("\n"):
 		match = []
 		if matchLine(line, r"Starting: (.*)", match):
 			if current or data:
-				log("Ignoring data for failed run for %s" % (current))
+				log(f"Ignoring data for failed run for {current}")
 			current, data = match[0], []
-			if not current in result:
+			if current not in result:
 				result[current] = []
-		
+
 		elif matchLine(line, r"load: (\d+(?:\.\d+)?) ms", match):
 			assert not data
 			data.append(float(match[0]))
-		
+
 		elif matchLine(line, r"Finished \(in (\d+(?:\.\d+)?) ms\): (.*)", match):
 			assert len(data) == 1
 			data.append(float(match[0]))
 			result[current].append(data)
 			current, data = None, []
-	
+
 	return result
 
 def displayBenchResults(result):
@@ -64,26 +64,27 @@ def displayBenchResults(result):
 
 def main():
 	if not sys.argv[1:]:
-		log("Usage: %s [<SumatraPDF.exe>] <file1.pdf> [<file2.pdf> ...]" % (os.path.split(sys.argv[0])[1]))
+		log(f"Usage: {os.path.split(sys.argv[0])[1]} [<SumatraPDF.exe>] <file1.pdf> [<file2.pdf> ...]"
+		    )
 		sys.exit(0)
-	
+
 	if sys.argv[1].lower().endswith(".exe"):
 		SumatraPDFExe = sys.argv.pop(1)
 	else:
 		SumatraPDFExe = os.path.join(os.path.dirname(__file__), "..", "obj-rel", "SumatraPDF.exe")
 		if not os.path.exists(SumatraPDFExe):
 			SumatraPDFExe = "SumatraPDF.exe"
-	
+
 	benchData = ""
-	log("Running benchmark with %s..." % os.path.relpath(SumatraPDFExe))
+	log(f"Running benchmark with {os.path.relpath(SumatraPDFExe)}...")
 	for file in sys.argv[1:]:
 		try:
 			benchData += runBenchmark(SumatraPDFExe, file, 10) + "\n"
 		except:
-			log("Error: %s not found" % os.path.relpath(SumatraPDFExe))
+			log(f"Error: {os.path.relpath(SumatraPDFExe)} not found")
 			return
 	log("")
-	
+
 	displayBenchResults(parseBenchOutput(benchData))
 
 if __name__ == "__main__":

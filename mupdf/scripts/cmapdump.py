@@ -16,9 +16,7 @@ def dumpcmap(filename):
 	map = {}
 
 	def tocode(s):
-		if s[0] == '<' and s[-1] == '>':
-			return int(s[1:-1], 16)
-		return int(s, 10)
+		return int(s[1:-1], 16) if s[0] == '<' and s[-1] == '>' else int(s, 10)
 
 	def map_cidchar(lo, v):
 		map[lo] = v
@@ -38,7 +36,7 @@ def dumpcmap(filename):
 		elif len(v) <= 8:
 			map[lo] = v[:]
 		else:
-			print("/* warning: too long one-to-many mapping: %s */" % (v))
+			print(f"/* warning: too long one-to-many mapping: {v} */")
 
 	def map_bfchar(lo, bf):
 		bf = bf[1:-1] # drop < >

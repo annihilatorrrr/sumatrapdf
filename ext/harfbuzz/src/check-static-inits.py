@@ -27,12 +27,14 @@ for obj in OBJS:
 	# Checking that no object file has static initializers
 	for l in re.findall (r'^.*\.[cd]tors.*$', result, re.MULTILINE):
 		if not re.match (r'.*\b0+\b', l):
-			print ('Ouch, %s has static initializers/finalizers' % obj)
+			print(f'Ouch, {obj} has static initializers/finalizers')
 			stat = 1
 
 	# Checking that no object file has lazy static C++ constructors/destructors or other such stuff
 	if ('__cxa_' in result) and ('__ubsan_handle' not in result):
-		print ('Ouch, %s has lazy static C++ constructors/destructors or other such stuff' % obj)
+		print(
+		    f'Ouch, {obj} has lazy static C++ constructors/destructors or other such stuff'
+		)
 		stat = 1
 
 sys.exit (stat)

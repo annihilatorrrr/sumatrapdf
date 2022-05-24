@@ -18,10 +18,10 @@ if not wordlist:
 
 def process_wordlist(text):
     wordlist = [w.strip().replace('"', '') for w in text.split(',')]
-    taglist = [
+    return [
         "\tGUMBO_TAG_" + (w.upper().replace('-', '_') if w else 'LAST')
-        for w in wordlist]
-    return taglist
+        for w in wordlist
+    ]
 
 print "static unsigned int tag_hash(%s)\n{%s\n}" % (
         hash_func.group(1), hash_func.group(2))

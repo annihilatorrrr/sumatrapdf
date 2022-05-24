@@ -34,7 +34,7 @@ def log_prefix_set(prefix):
 
 g_test_n = 0
 
-g_mupdf_root = os.path.abspath('%s/../..' % __file__)
+g_mupdf_root = os.path.abspath(f'{__file__}/../..')
 
 
 def show_stext(document):
@@ -55,23 +55,48 @@ def show_stext(document):
                         )
                 for char in line:
                     char_ = char.m_internal
-                    log(f'        char: {chr(char_.c)!r} c={char_.c:4} color={char_.color}'
-                            + f' origin={char_.origin}'
-                            + f' quad={char_.quad}'
-                            + f' size={char_.size:6.2f}'
-                            + f' font=('
-                                +  f'is_mono={char_.font.flags.is_mono}'
-                                + f' is_bold={char_.font.flags.is_bold}'
-                                + f' is_italic={char_.font.flags.is_italic}'
-                                + f' ft_substitute={char_.font.flags.ft_substitute}'
-                                + f' ft_stretch={char_.font.flags.ft_stretch}'
-                                + f' fake_bold={char_.font.flags.fake_bold}'
-                                + f' fake_italic={char_.font.flags.fake_italic}'
-                                + f' has_opentype={char_.font.flags.has_opentype}'
-                                + f' invalid_bbox={char_.font.flags.invalid_bbox}'
+                    log(
+                        (
+                            (
+                                (
+                                    (
+                                        (
+                                            (
+                                                (
+                                                    (
+                                                        (
+                                                            (
+                                                                (
+                                                                    (
+                                                                        f'        char: {chr(char_.c)!r} c={char_.c:4} color={char_.color}'
+                                                                        + f' origin={char_.origin}'
+                                                                        + f' quad={char_.quad}'
+                                                                        + f' size={char_.size:6.2f}'
+                                                                        + ' font=('
+                                                                    )
+                                                                    + f'is_mono={char_.font.flags.is_mono}'
+                                                                )
+                                                                + f' is_bold={char_.font.flags.is_bold}'
+                                                            )
+                                                            + f' is_italic={char_.font.flags.is_italic}'
+                                                        )
+                                                        + f' ft_substitute={char_.font.flags.ft_substitute}'
+                                                    )
+                                                    + f' ft_stretch={char_.font.flags.ft_stretch}'
+                                                )
+                                                + f' fake_bold={char_.font.flags.fake_bold}'
+                                            )
+                                            + f' fake_italic={char_.font.flags.fake_italic}'
+                                        )
+                                        + f' has_opentype={char_.font.flags.has_opentype}'
+                                    )
+                                    + f' invalid_bbox={char_.font.flags.invalid_bbox}'
+                                )
                                 + f' name={char_.font.name}'
-                                + f')'
                             )
+                            + ')'
+                        )
+                    )
 
 def test(path):
     '''
@@ -218,8 +243,7 @@ def test(path):
     #
     log(f'Outlines.')
     def olog(text):
-        if 0:
-            log(text)
+        pass
     num_outline_items = 0
     depth = 0
     it = mupdf.OutlineIterator(document)
@@ -330,4 +354,4 @@ if __name__ == '__main__':
         finally:
             log_prefix_set('')
 
-    log(f'finished')
+    log('finished')

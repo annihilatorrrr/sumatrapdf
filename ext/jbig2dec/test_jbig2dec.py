@@ -38,7 +38,7 @@ class SelfTestSuite:
   def run(self):
     starttime = time.time()
     for test in self.tests:
-      self.stream.write("%s ... " % test.shortDescription())
+      self.stream.write(f"{test.shortDescription()} ... ")
       test.result = 'ok'
       test.runTest()
       if test.result != 'ok':
@@ -157,7 +157,7 @@ class KnownFileHash(SelfTest):
     self.assertEqual(self.file_hash, sha1.hexdigest())
 
     # invoke jbig2dec on our file
-    instance = os.popen('./jbig2dec -q -o /dev/null --hash ' + self.file)
+    instance = os.popen(f'./jbig2dec -q -o /dev/null --hash {self.file}')
     lines = instance.readlines()
     exit_code = instance.close()
     self.failIf(exit_code, 'jbig2dec should exit normally')
@@ -165,8 +165,7 @@ class KnownFileHash(SelfTest):
     # test here for correct hash
     hash_pattern = re.compile('[0-9a-f]{%d}' % len(decode_hash))
     for line in lines:
-      m = hash_pattern.search(line.lower())
-      if m:
+      if m := hash_pattern.search(line.lower()):
         self.assertEqual(self.decode_hash, m.group(),
           'hash of known decoded document must be correct')
         return

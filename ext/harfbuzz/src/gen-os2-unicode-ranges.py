@@ -5,6 +5,7 @@ Input is a tab seperated list of unicode ranges from the otspec
 (https://docs.microsoft.com/en-us/typography/opentype/spec/os2#ur).
 """
 
+
 import re
 import sys
 
@@ -35,7 +36,7 @@ with open (input_file, mode="r", encoding="utf-8") as f:
     if len(ranges) != 2:
       raise Exception("bad input :(.")
 
-    v = tuple((int(ranges[0], 16), int(ranges[1], 16), int(current_bit), name))
+    v = int(ranges[0], 16), int(ranges[1], 16), int(current_bit), name
     all_ranges.append(v)
 
 all_ranges = sorted(all_ranges, key=lambda t: t[0])
@@ -43,7 +44,7 @@ all_ranges = sorted(all_ranges, key=lambda t: t[0])
 for ranges in all_ranges:
   start = ("0x%X" % ranges[0]).rjust(8)
   end = ("0x%X" % ranges[1]).rjust(8)
-  bit = ("%s" % ranges[2]).rjust(3)
+  bit = f"{ranges[2]}".rjust(3)
 
   print ("  {%s, %s, %s}, // %s" % (start, end, bit, ranges[3]))
 

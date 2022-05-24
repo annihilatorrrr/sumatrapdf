@@ -22,11 +22,7 @@ def place( frame_record):
     filename    = frame_record.filename
     line        = frame_record.lineno
     function    = frame_record.function
-    ret = os.path.split( filename)[1] + ':' + str( line) + ':' + function + ':'
-    if 0:   # lgtm [py/unreachable-statement]
-        tid = str( threading.currentThread())
-        ret = '[' + tid + '] ' + ret
-    return ret
+    return f'{os.path.split( filename)[1]}:{str(line)}:{function}:'
 
 
 def expand_nv( text, caller=1):
@@ -100,7 +96,7 @@ def expand_nv( text, caller=1):
                         text2 = text2[1:]
                         for i, text3 in enumerate(text2.split()):
                             pre2 = ' ' if i else pre
-                            yield pre2, text3 + '='
+                            yield (pre2, f'{text3}=')
                     else:
                         yield pre, text[ pos+1 : close]
                     pre = ''
@@ -153,16 +149,16 @@ class LogPrefixTime:
         if self.time:
             ret += time.strftime( ' %T')
         if self.elapsed:
-            ret += ' (+%s)' % time_duration( time.time() - self.t0, s_format='%.1f')
+            ret += f" (+{time_duration(time.time() - self.t0, s_format='%.1f')})"
         if ret:
-            ret = ret.strip() + ': '
+            ret = f'{ret.strip()}: '
         return ret
 
 class LogPrefixFileLine:
     def __call__( self, caller):
         if isinstance( caller, int):
             caller = inspect.stack()[ caller]
-        return place( caller) + ' '
+        return f'{place(caller)} '
 
 class LogPrefixScopes:
     '''
@@ -249,10 +245,7 @@ def log_text( text=None, caller=1, nv=True, raw=False):
     prefix = ''
     for p in g_log_prefixes:
         if callable( p):
-            if isinstance( p, LogPrefixFileLine):
-                p = p(caller)
-            else:
-                p = p()
+            p = p(caller) if isinstance( p, LogPrefixFileLine) else p()
         prefix += p
 
     if text is None:
@@ -269,9 +262,7 @@ def log_text( text=None, caller=1, nv=True, raw=False):
     global _log_text_line_start
     text2 = ''
     pos = 0
-    while 1:
-        if pos == len(text):
-            break
+    while 1 and pos != len(text):
         if not raw or _log_text_line_start:
             text2 += prefix
         nl = text.find('\n', pos)
@@ -288,7 +279,7 @@ def log_text( text=None, caller=1, nv=True, raw=False):
     return text2
 
 
-s_log_levels_cache = dict()
+s_log_levels_cache = {}
 s_log_levels_items = []
 
 def log_levels_find( caller):
@@ -441,21 +432,12 @@ def log_levels_add_env( name='JLIB_log_levels'):
     '''
     Added log levels encoded in an environmental variable.
     '''
-    t = os.environ.get( name)
-    if t:
+    if t := os.environ.get(name):
         for ffll in t.split( ','):
             ffl, delta = ffll.split( '=', 1)
             delta = int( delta)
             ffl = ffl.split( ':')
-            if 0:   # lgtm [py/unreachable-statement]
-                pass
-            elif len( ffl) == 1:
-                filename = ffl
-                function = None
-            elif len( ffl) == 2:
-                filename, function = ffl
-            else:
-                assert 0
+            assert 0
             log_levels_add( delta, filename, function)
 
 
@@ -789,10 +771,7 @@ class StreamPrefix:
             self.stream_write = stream.write
             self.stream_flush = stream.flush
         self.at_start = True
-        if callable(prefix):
-            self.prefix = prefix
-        else:
-            self.prefix = lambda : prefix
+        self.prefix = prefix if callable(prefix) else (lambda : prefix)
 
     def write( self, text):
         if self.at_start:
@@ -858,13 +837,12 @@ def time_duration( seconds, verbose=False, s_format='%i'):
     '''
     x = abs(seconds)
     ret = ''
-    i = 0
-    for div, text in [
+    for i, (div, text) in enumerate([
             ( 60, 'sec'),
             ( 60, 'min'),
             ( 24, 'hour'),
             ( None, 'day'),
-            ]:
+            ]):
         force = ( x == 0 and i == 0)
         if div:
             remainder = x % div
@@ -874,20 +852,19 @@ def time_duration( seconds, verbose=False, s_format='%i'):
         if not verbose:
             text = text[0]
         if remainder or force:
-            if verbose and remainder > 1:
-                # plural.
-                text += 's'
             if verbose:
-                text = ' %s ' % text
+                if remainder > 1:
+                    # plural.
+                    text += 's'
+                text = f' {text} '
             if i == 0:
                 remainder = s_format % remainder
-            ret = '%s%s%s' % ( remainder, text, ret)
-        i += 1
+            ret = f'{remainder}{text}{ret}'
     ret = ret.strip()
     if ret == '':
         ret = '0s'
     if seconds < 0:
-        ret = '-%s' % ret
+        ret = f'-{ret}'
     return ret
 
 
@@ -902,10 +879,7 @@ def stream_prefix_time( stream):
     '''
     t_start = time.time()
     def prefix_time():
-        return '%s (+%s): ' % (
-                time.strftime( '%T'),
-                time_duration( time.time() - t_start, s_format='0.1f'),
-                )
+        return f"{time.strftime('%T')} (+{time_duration(time.time() - t_start, s_format='0.1f')}): "
     return StreamPrefix( stream, prefix_time)
 
 def stdout_prefix_time():
@@ -1087,11 +1061,11 @@ def system(
                 assert o not in (None, subprocess.DEVNULL), f'out[]={o} does not make sense with a prefix ({o_prefix})'
             assert not isinstance(o, (tuple, list))
             if o == 'return':
-                assert not out_return, f'"return" specified twice does not make sense'
+                assert not out_return, '"return" specified twice does not make sense'
                 out_return = io.StringIO()
                 outs[i] = out_return.write
             elif o == 'log':
-                assert not out_log, f'"log" specified twice does not make sense'
+                assert not out_log, '"log" specified twice does not make sense'
                 out_log += 1
                 out_frame_record = inspect.stack()[caller]
                 outs[i] = lambda text: log( text, caller=out_frame_record, nv=False, raw=True)
@@ -1146,16 +1120,7 @@ def system(
             )
 
     if out_pipe:
-        decoder = None
-        if encoding:
-            # subprocess's universal_newlines and codec.streamreader seem to
-            # always use buffering even with bufsize=0, so they don't reliably
-            # display prompts or other text that doesn't end with a newline.
-            #
-            # So we create our own incremental decode, which seems to work
-            # better.
-            #
-            decoder = codecs.getincrementaldecoder(encoding)(errors)
+        decoder = codecs.getincrementaldecoder(encoding)(errors) if encoding else None
         while 1:
             # os.read() seems to be better for us than child.stdout.read()
             # because it returns a short read if data is not available. Where
@@ -1177,10 +1142,9 @@ def system(
 
     e = child.wait()
 
-    if out_log:
-        if not _log_text_line_start:
-            # Terminate last incomplete line of log outputs.
-            sys.stdout.write('\n')
+    if out_log and not _log_text_line_start:
+        # Terminate last incomplete line of log outputs.
+        sys.stdout.write('\n')
     if verbose:
         log(f'[returned e={e}]', nv=0, caller=caller+1)
 
@@ -1193,25 +1157,21 @@ def system(
             if env_extra:
                 for n, v in env_extra.items():
                     env_string += f'{n}={v} '
-            if out_return is not None:
-                if not out_return.endswith('\n'):
-                    out_return += '\n'
-                raise Exception(
-                        f'Command failed: {env_string}{command}\n'
-                        f'Output was:\n'
-                        f'{out_return}'
-                        )
-            else:
+            if out_return is None:
                 raise Exception( f'command failed: {env_string}{command}')
+            if not out_return.endswith('\n'):
+                out_return += '\n'
+            raise Exception(
+                    f'Command failed: {env_string}{command}\n'
+                    f'Output was:\n'
+                    f'{out_return}'
+                    )
         elif out_return is not None:
             return out_return
         else:
             return
 
-    if out_return is not None:
-        return e, out_return
-    else:
-        return e
+    return (e, out_return) if out_return is not None else e
 
 
 def system_rusage(
@@ -1232,20 +1192,22 @@ def system_rusage(
     '''
     Old code that gets timing info; probably doesn't work.
     '''
-    command2 = ''
-    command2 += '/usr/bin/time -o ubt-out -f "D=%D E=%D F=%F I=%I K=%K M=%M O=%O P=%P R=%r S=%S U=%U W=%W X=%X Z=%Z c=%c e=%e k=%k p=%p r=%r s=%s t=%t w=%w x=%x C=%C"'
+    command2 = (
+        ''
+        + '/usr/bin/time -o ubt-out -f "D=%D E=%D F=%F I=%I K=%K M=%M O=%O P=%P R=%r S=%S U=%U W=%W X=%X Z=%Z c=%c e=%e k=%k p=%p r=%r s=%s t=%t w=%w x=%x C=%C"'
+    )
+
     command2 += ' '
     command2 += command
 
-    e = system(
-            command2,
-            out,
-            shell,
-            encoding,
-            errors,
-            executable=executable,
-            )
-    if e:
+    if e := system(
+        command2,
+        out,
+        shell,
+        encoding,
+        errors,
+        executable=executable,
+    ):
         raise Exception('/usr/bin/time failed')
     with open('ubt-out') as f:
         rusage_text = f.read()
@@ -1272,26 +1234,24 @@ def get_gitfiles( directory, submodules=False):
 
     Otherwise we require that <directory>/jtest-git-files already exists.
     '''
-    if os.path.isdir( '%s/.git' % directory):
-        command = 'cd ' + directory + ' && git ls-files'
+    if os.path.isdir(f'{directory}/.git'):
+        command = f'cd {directory} && git ls-files'
         if submodules:
             command += ' --recurse-submodules'
         command += ' > jtest-git-files'
         system( command, verbose=True)
 
-    with open( '%s/jtest-git-files' % directory, 'r') as f:
+    with open(f'{directory}/jtest-git-files', 'r') as f:
         text = f.read()
-    ret = text.strip().split( '\n')
-    return ret
+    return text.strip().split( '\n')
 
 def get_git_id_raw( directory):
-    if not os.path.isdir( '%s/.git' % directory):
+    if not os.path.isdir(f'{directory}/.git'):
         return
-    text = system(
-            f'cd {directory} && (PAGER= git show --pretty=oneline|head -n 1 && git diff)',
-            out='return',
-            )
-    return text
+    return system(
+        f'cd {directory} && (PAGER= git show --pretty=oneline|head -n 1 && git diff)',
+        out='return',
+    )
 
 def get_git_id( directory, allow_none=False):
     '''
@@ -1312,10 +1272,10 @@ def get_git_id( directory, allow_none=False):
     elif os.path.isfile( filename):
         with open( filename) as f:
             text = f.read()
-    else:
-        if not allow_none:
-            raise Exception( f'Not in git checkout, and no file called: {filename}.')
+    elif allow_none:
         text = None
+    else:
+        raise Exception( f'Not in git checkout, and no file called: {filename}.')
     return text
 
 class Args:
@@ -1325,10 +1285,7 @@ class Args:
     def __init__( self, argv):
         self.items = iter( argv)
     def next( self):
-        if sys.version_info[0] == 3:
-            return next( self.items)
-        else:
-            return self.items.next()
+        return next( self.items) if sys.version_info[0] == 3 else self.items.next()
     def next_or_none( self):
         try:
             return self.next()
@@ -1351,7 +1308,7 @@ def update_file( text, filename, return_different=False):
     if text != text0:
         if return_different and text0 is not None:
             return text
-        log( 'Updating:  ' + filename)
+        log(f'Updating:  {filename}')
         # Write to temp file and rename, to ensure we are atomic.
         filename_temp = f'{filename}-jlib-temp'
         with open( filename_temp, 'w') as f:
@@ -1402,9 +1359,8 @@ def get_filenames( paths):
                     path = os.path.join( dirpath, filename)
                     if filter_( path):
                         yield path
-        else:
-            if filter_( name):
-                yield name
+        elif filter_( name):
+            yield name
 
 def remove( path):
     '''
@@ -1450,8 +1406,7 @@ def copy(src, dest, verbose=False):
     '''
     if verbose:
         log('Copying {src} to {dest}')
-    dirname = os.path.dirname(dest)
-    if dirname:
+    if dirname := os.path.dirname(dest):
         os.makedirs( dirname, exist_ok=True)
     shutil.copy2( src, dest)
 
@@ -1499,12 +1454,10 @@ def update_needed( infiles, outfiles):
     in_tmax, in_tmax_name = newest( infiles)
     out_tmin, out_tmin_name = oldest( outfiles)
     if in_tmax > out_tmin:
-        text = f'{in_tmax_name} is newer than {out_tmin_name}'
-        return text
+        return f'{in_tmax_name} is newer than {out_tmin_name}'
 
 def ensure_parent_dir( path):
-    parent = os.path.dirname( path)
-    if parent:
+    if parent := os.path.dirname(path):
         os.makedirs( parent, exist_ok=True)
 
 def build(
@@ -1658,16 +1611,11 @@ def link_l_flags( sos, ld_origin=None):
         name = name[3:-3]
         dirs.add( dir_)
         names.append( name)
-    ret = ''
-    # Important to use sorted() here, otherwise ordering from set() is
-    # arbitrary causing occasional spurious rebuilds.
-    for dir_ in sorted(dirs):
-        ret += f' -L {dir_}'
+    ret = ''.join(f' -L {dir_}' for dir_ in sorted(dirs))
     for name in names:
         ret += f' -l {name}'
-    if ld_origin is None:
-        if os.uname()[0] == 'Linux':
-            ld_origin = True
+    if ld_origin is None and os.uname()[0] == 'Linux':
+        ld_origin = True
     if ld_origin:
         ret += " -Wl,-rpath='$ORIGIN'"
     #log('{sos=} {ld_origin=} {ret=}')
@@ -1680,9 +1628,9 @@ class ArgResult:
     plus iteration. See Arg docs for details.
     '''
     def __init__(self):
-        self._attr = dict() # Maps names to values.
-        self._dict = dict() # Maps raw names to values.
-        self._list = list() # Ordered list of (name, value, ArgResult) tuples.
+        self._attr = {}
+        self._dict = {}
+        self._list = []
 
     # __getattr__() and __getitem__() augment default behaviour by returning
     # from self._attr or self._list as appropriate.
@@ -1697,14 +1645,13 @@ class ArgResult:
             raise AttributeError
 
     def __getitem__(self, i):
-        if isinstance(i, int):
-            # [23] returns self._list[23].
-            if i < 0:
-                i += len(self._list)
-            return self._list[i]
-        else:
+        if not isinstance(i, int):
             # ['foo'] returns self._attr['foo'].
             return self._attr[i]
+        # [23] returns self._list[23].
+        if i < 0:
+            i += len(self._list)
+        return self._list[i]
 
     def _set(self, name, name_raw, value, multi=False):
         if multi:
@@ -2048,7 +1995,7 @@ class Arg:
             If true we allow any number of these args.
         '''
         self.syntax = syntax
-        self.subargs = subargs if subargs else []
+        self.subargs = subargs or []
         self.help_ = help
         self.required = required
         self.multi = multi
@@ -2168,7 +2115,7 @@ class Arg:
             self.name = self.name.replace('-', '_')
             self.name = re.sub('[^a-zA-Z0-9_]', '', self.name)
             if self.name[0] in '0123456789':
-                self.name = '_' + self.name
+                self.name = f'_{self.name}'
         def __repr__(self):
             return f'text={self.text} literal={self.literal}'
 
@@ -2178,7 +2125,7 @@ class Arg:
         '''
         if self.subargs:
             assert isinstance(self.subargs, list)
-            name_to_subarg = dict()
+            name_to_subarg = {}
             for subarg in self.subargs:
                 subarg.parent = self
                 duplicate = name_to_subarg.get(subarg.name)
@@ -2217,16 +2164,15 @@ class Arg:
                 if item.text != argv[pos+i]:
                     failures.add(pos+i, self)
                     return None
+            elif argv[pos+i].startswith('-'):
+                failures.add(pos+i, self, 'value must not start with "-"')
+                return None
+            elif len(self.syntax_items) == 1:
+                result = argv[pos+i]
             else:
-                if argv[pos+i].startswith('-'):
-                    failures.add(pos+i, self, f'value must not start with "-"')
-                    return None
-                elif len(self.syntax_items) == 1:
-                    result = argv[pos+i]
-                else:
-                    if result is None:
-                        result = ArgResult()
-                    result._set(item.name, item.name, argv[pos+i])
+                if result is None:
+                    result = ArgResult()
+                result._set(item.name, item.name, argv[pos+i])
 
         if self.match_remaining:
             r = argv[pos+len(self.syntax_items):]
@@ -2254,7 +2200,7 @@ class Arg:
             n += subargs_n
             result = subargs_out if result is True else (result, subargs_out)
 
-        out._set(self.name if self.name else '_', self.name_raw, result, self.multi)
+        out._set(self.name or '_', self.name_raw, result, self.multi)
 
         item_list_ns = ArgResult()
         item_list_ns._set(self.name, self.name_raw, result)
@@ -2339,7 +2285,7 @@ class Arg:
         def __str__(self):
             ret = ''
             if self.pos == len(self.argv):
-                ret += f'Ran out of arguments'
+                ret += 'Ran out of arguments'
             else:
                 ret += f'Failed at argv[{self.pos}]={self.argv[self.pos]!r}'
             for i in self.misc:
@@ -2361,8 +2307,7 @@ class Arg:
 
     def _path(self):
         if self.parent:
-            p = self.parent._path()
-            if p:
+            if p := self.parent._path():
                 return f'{self.parent._path()}:{self.name}'
         return self.name
 
@@ -2423,7 +2368,7 @@ class Arg:
 
         if self.subargs:
             for subarg in self.subargs:
-                t = subarg.help_text( prefix + '    ', mid=mid, brief=brief)
+                t = subarg.help_text(f'{prefix}    ', mid=mid, brief=brief)
                 text += t
 
         assert text.endswith('\n')
@@ -2492,7 +2437,7 @@ class Arg:
                 lines = para.split('\n')
                 for i, line in enumerate(lines):
                     m = re.search('^( *)[^ ]', line)
-                    indent = len(m.group(1)) if m else 0
+                    indent = len(m[1]) if m else 0
                     if i and not prev_backslash and indent != indent_prev:
                         yield indent_prev, prev_prev_backslash, '\n'.join(lines[i0:i])
                         i0 = i

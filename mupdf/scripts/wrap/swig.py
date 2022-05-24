@@ -77,7 +77,7 @@ def build_swig(
             raise
     m = re.search( 'SWIG Version ([0-9]+)[.]([0-9]+)[.]([0-9]+)', t)
     assert m
-    swig_major = int( m.group(1))
+    swig_major = int(m[1])
 
     # Create a .i file for SWIG.
     #
@@ -292,10 +292,7 @@ def build_swig(
 
     text = ''
 
-    if state_.windows:
-        # 2022-02-24: Director classes break Windows builds at the moment.
-        pass
-    else:
+    if not state_.windows:
         text += '%module(directors="1") mupdf\n'
         for i in generated.virtual_fnptrs:
             text += f'%feature("director") {i};\n'
@@ -314,13 +311,7 @@ def build_swig(
                 }
                 ''')
     for fnname in generated.c_functions:
-        if fnname in ('pdf_annot_type', 'pdf_widget_type'):
-            # These are also enums which we don't want to ignore. SWIGing the
-            # functions is hopefully harmless.
-            pass
-        elif 0 and fnname == 'pdf_string_from_annot_type':  # causes duplicate symbol with classes2.cpp and python.
-            pass
-        else:
+        if fnname not in ('pdf_annot_type', 'pdf_widget_type'):
             text += f'%ignore {fnname};\n'
 
     for i in (
@@ -785,29 +776,28 @@ def build_swig(
 
         text += '%}\n'
 
-    if 1:   # lgtm [py/constant-conditional-expression]
-        # This is a horrible hack to avoid swig failing because
-        # include/mupdf/pdf/object.h defines an enum which contains a #include.
-        #
-        # Would like to pre-process files in advance so that swig doesn't see
-        # the #include, but this breaks swig in a different way - swig cannot
-        # cope with some code in system headers.
-        #
-        # So instead we copy include/mupdf/pdf/object.h into
-        # {build_dirs.dir_mupdf}/platform/python/include/mupdf/pdf/object.h,
-        # manually expanding the #include using a Python .replace() call. Then
-        # we specify {build_dirs.dir_mupdf}/platform/python/include as the
-        # first include path so that our modified mupdf/pdf/object.h will get
-        # included in preference to the original.
-        #
-        os.makedirs(f'{build_dirs.dir_mupdf}/platform/python/include/mupdf/pdf', exist_ok=True)
-        with open( f'{build_dirs.dir_mupdf}/include/mupdf/pdf/object.h') as f:
-            o = f.read()
-        with open( f'{build_dirs.dir_mupdf}/include/mupdf/pdf/name-table.h') as f:
-            name_table_h = f.read()
-        oo = o.replace( '#include "mupdf/pdf/name-table.h"\n', name_table_h)
-        assert oo != o
-        jlib.update_file( oo, f'{build_dirs.dir_mupdf}/platform/python/include/mupdf/pdf/object.h')
+    # This is a horrible hack to avoid swig failing because
+    # include/mupdf/pdf/object.h defines an enum which contains a #include.
+    #
+    # Would like to pre-process files in advance so that swig doesn't see
+    # the #include, but this breaks swig in a different way - swig cannot
+    # cope with some code in system headers.
+    #
+    # So instead we copy include/mupdf/pdf/object.h into
+    # {build_dirs.dir_mupdf}/platform/python/include/mupdf/pdf/object.h,
+    # manually expanding the #include using a Python .replace() call. Then
+    # we specify {build_dirs.dir_mupdf}/platform/python/include as the
+    # first include path so that our modified mupdf/pdf/object.h will get
+    # included in preference to the original.
+    #
+    os.makedirs(f'{build_dirs.dir_mupdf}/platform/python/include/mupdf/pdf', exist_ok=True)
+    with open( f'{build_dirs.dir_mupdf}/include/mupdf/pdf/object.h') as f:
+        o = f.read()
+    with open( f'{build_dirs.dir_mupdf}/include/mupdf/pdf/name-table.h') as f:
+        name_table_h = f.read()
+    oo = o.replace( '#include "mupdf/pdf/name-table.h"\n', name_table_h)
+    assert oo != o
+    jlib.update_file( oo, f'{build_dirs.dir_mupdf}/platform/python/include/mupdf/pdf/object.h')
 
     swig_i      = f'{build_dirs.dir_mupdf}/platform/{language}/mupdfcpp_swig.i'
     include1    = f'{build_dirs.dir_mupdf}/include/'
@@ -925,19 +915,7 @@ def build_swig(
     elif language == 'csharp':
         outdir = os.path.relpath(f'{build_dirs.dir_mupdf}/platform/csharp')
         os.makedirs(outdir, exist_ok=True)
-        # Looks like swig comes up with 'mupdfcpp_swig_wrap.cxx' leafname.
-        #
-        # We include platform/python/include in order to pick up the modified
-        # include/mupdf/pdf/object.h that we generate elsewhere.
-        dllimport = 'mupdfcsharp.so'
-        if state_.windows:
-            # Would like to specify relative path to .dll with:
-            #   dllimport = os.path.relpath( f'{build_dirs.dir_so}/mupdfcsharp.dll')
-            # but Windows/.NET doesn't seem to support this, despite
-            # https://stackoverflow.com/questions/31807289 "how can i add a
-            # swig generated c dll reference to a c sharp project".
-            #
-            dllimport = 'mupdfcsharp.dll'
+        dllimport = 'mupdfcsharp.dll' if state_.windows else 'mupdfcsharp.so'
         command = (
                 textwrap.dedent(
                 f'''
@@ -981,7 +959,7 @@ def build_swig(
                 )
         jlib.log('{len(cs)=}')
         jlib.log('{len(cs2)=}')
-        assert cs2 != cs, f'Failed to add toString() methods.'
+        assert cs2 != cs, 'Failed to add toString() methods.'
         jlib.log('{len(generated.swig_csharp)=}')
         assert len(generated.swig_csharp)
         cs2 += generated.swig_csharp

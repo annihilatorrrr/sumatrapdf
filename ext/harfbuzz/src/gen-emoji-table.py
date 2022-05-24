@@ -6,6 +6,7 @@ Input file:
 * https://www.unicode.org/Public/UCD/latest/ucd/emoji/emoji-data.txt
 """
 
+
 import sys
 from collections import OrderedDict
 import packTab
@@ -47,7 +48,7 @@ print (" *")
 print (" * on file with this header:")
 print (" *")
 for l in header:
-	print (" * %s" % (l.strip()))
+	print(f" * {l.strip()}")
 print (" */")
 print ()
 print ("#ifndef HB_UNICODE_EMOJI_TABLE_HH")
@@ -59,14 +60,14 @@ print ()
 for typ, s in ranges.items():
 	if typ != "Extended_Pictographic": continue
 
-	arr = dict()
+	arr = {}
 	for start,end in s:
 		for i in range(start,end):
 			arr[i] = 1
 
 	sol = packTab.pack_table(arr, 0, compression=3)
 	code = packTab.Code('_hb_emoji')
-	sol.genCode(code, 'is_'+typ)
+	sol.genCode(code, f'is_{typ}')
 	code.print_c(linkage='static inline')
 	print()
 

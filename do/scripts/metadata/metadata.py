@@ -25,7 +25,10 @@ class Type(object):
         self.set_val(def_val)
 
     def set_val(self, val):
-        assert self.is_valid_val(val), "%s is not a valid value of %s" % (str(self.val), str(self))
+        assert self.is_valid_val(
+            val
+        ), f"{str(self.val)} is not a valid value of {str(self)}"
+
         self.val = val
 
     def c_type(self):
@@ -123,7 +126,7 @@ class Struct(Type):
     def __init__(self, *vals):
         # fields must be a class variable in Struct's subclass
         self.values = [Field(f.name, f.typ, f.flags) for f in self.fields]
-        self.c_type_override = "%s *" % self.name()
+        self.c_type_override = f"{self.name()} *"
         self.offset = None
         for i in range(len(vals)):
             self.values[i].set_val(vals[i])
@@ -164,7 +167,7 @@ class Array(Type):
         self.values = values
         for v in values:
             assert self.is_valid_val(v)
-        self.c_type_override = "Vec<%s*> *" % typ.__name__
+        self.c_type_override = f"Vec<{typ.__name__}*> *"
         self.offset = None
 
     def is_valid_val(self, val):
@@ -250,10 +253,10 @@ class Field(object):
         # binary doesn't have a notion of compact storage
         is_compact = self.is_compact() and not for_bin
         if self.is_no_store() or is_compact:
-            s = "(Type)(" + type_enum
+            s = f"(Type)({type_enum}"
             if self.is_no_store():
-                s = s + " | TYPE_NO_STORE_MASK"
+                s = f"{s} | TYPE_NO_STORE_MASK"
             if self.is_compact():
-                s = s + " | TYPE_STORE_COMPACT_MASK"
-            return s + ")"
+                s = f"{s} | TYPE_STORE_COMPACT_MASK"
+            return f"{s})"
         return type_enum

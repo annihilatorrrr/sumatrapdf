@@ -125,7 +125,7 @@ class SectionToObjFile(object):
 class Symbol(object):
 	def __init__(self, l):
 		parts = l.split("|")
-		assert len(parts) in (6,7), "len(parts) is %d\n'%s'" % (len(parts), l)
+		assert len(parts) in {6, 7}, "len(parts) is %d\n'%s'" % (len(parts), l)
 		self.type = parts[0]
 		self.section = int(parts[1])
 		self.size = int(parts[2])
@@ -139,7 +139,7 @@ class Symbol(object):
 		self.objname = None
 
 	def full_name(self):
-		return self.name + "@" + self.objname
+		return f"{self.name}@{self.objname}"
 
 class Type(object):
 	def __init__(self, l):
@@ -148,7 +148,7 @@ class Type(object):
 
 def print_sym(sym):
 	print(sym)
-	print("name : %s" % sym.name)
+	print(f"name : {sym.name}")
 	print("off  : %d" % sym.offset)
 	print("size : %d" % sym.size)
 
@@ -210,7 +210,7 @@ def parse_start(state):
 def parse_next_section(state):
 	l = state.readline()
 	#print("'%s'" % l)
-	if l == None: return None
+	if l is None: return None
 	if l == "": return parse_next_section
 	if l == "Strings:":
 		return parse_strings
@@ -226,14 +226,14 @@ def parse_next_section(state):
 def parse_strings(state):
 	while True:
 		l = state.readline()
-		if l == None: return None
+		if l is None: return None
 		if l == "": return parse_next_section
 		parts = l.split("|", 2)
 		idx = int(parts[0])
 		s = parts[1]
 		for splitter in state.obj_file_splitters:
 			pos = s.find(splitter)
-			if -1 != pos:
+			if pos != -1:
 				s = s[pos + len(splitter):]
 				break
 		state.strings.add(idx, s)
@@ -241,21 +241,21 @@ def parse_strings(state):
 def parse_sections(state):
 	while True:
 		l = state.readline()
-		if l == None: return None
+		if l is None: return None
 		if l == "": return parse_next_section
 		state.sections.append(Section(l, state.strings))
 
 def parse_symbols(state):
 	while True:
 		l = state.readline()
-		if l == None: return None
+		if l is None: return None
 		if l == "": return parse_next_section
 		state.add_symbol(Symbol(l))
 
 def parse_types(state):
 	while True:
 		l = state.readline()
-		if l == None: return None
+		if l is None: return None
 		if l == "": return parse_next_section
 		# TODO: should parse structs, not just count them
 		if l.startswith("struct"):
@@ -275,7 +275,7 @@ def parse_file_object(fo, obj_file_splitters):
 	return state
 
 def parse_file(file_name, obj_file_splitters=[]):
-	print("parse_file: %s" % file_name)
+	print(f"parse_file: {file_name}")
 	if file_name.endswith(".bz2"):
 		with bz2.BZ2File(file_name, "r", buffering=2*1024*1024) as fo:
 			return parse_file_object(fo, obj_file_splitters)
@@ -283,8 +283,7 @@ def parse_file(file_name, obj_file_splitters=[]):
 		return parse_file_object(fo, obj_file_splitters)
 
 def n_as_str(n):
-	if n > 0: return "+" + str(n)
-	return str(n)
+	return f"+{str(n)}" if n > 0 else str(n)
 
 class Diff(object):
 	def __init__(self):
@@ -318,14 +317,15 @@ class Diff(object):
 		n_added = len(self.added)
 		n_removed = len(self.removed)
 		n_changed = len(self.changed)
-		s = """symbols       : %(symbols_diff)-6s (%(n_symbols1)d => %(n_symbols2)d)
+		return (
+		    """symbols       : %(symbols_diff)-6s (%(n_symbols1)d => %(n_symbols2)d)
 added         : %(n_added)d
 removed       : %(n_removed)d
 changed       : %(n_changed)d
 symbol sizes  : %(sym_size_diff)-6s (%(sym_size1)d => %(sym_size2)d)
 wasted rouding: %(wasted_diff)-6s (%(wasted1)d => %(wasted2)d)
-string sizes  : %(str_sizes_diff)-6s (%(str_sizes1)d => %(str_sizes2)d)""" % locals()
-		return s
+string sizes  : %(str_sizes_diff)-6s (%(str_sizes1)d => %(str_sizes2)d)"""
+		    % locals())
 
 def same_sym_sizes(syms):
 	sizes = []
@@ -336,9 +336,7 @@ def same_sym_sizes(syms):
 	return False
 
 def syms_len(syms):
-	if isinstance(syms, list):
-		return len(syms)
-	return 1
+	return len(syms) if isinstance(syms, list) else 1
 
 class ChangedSymbol(object):
 	def __init__(self, sym1, sym2):
@@ -375,9 +373,7 @@ class SymbolStats(object):
 			self.name_to_sym[name] = v
 
 	def syms_len(self, name):
-		if name not in self.name_to_sym:
-			return 0
-		return syms_len(self.name_to_sym[name])
+		return 0 if name not in self.name_to_sym else syms_len(self.name_to_sym[name])
 
 def find_added(name, diff_syms1, diff_syms2):
 	if name not in diff_syms1.name_to_sym:
@@ -404,12 +400,11 @@ def diff(parse1, parse2):
 		len2 = diff_syms2.syms_len(name)
 		if len2 > len1:
 			added += find_added(name, diff_syms1, diff_syms2)
-		else:
-			if len1 == 1 and len2 == 1:
-				sym1 = diff_syms1.name_to_sym[name]
-				sym2 = diff_syms2.name_to_sym[name]
-				if sym1.size != sym2.size:
-					changed += [ChangedSymbol(sym1, sym2)]
+		elif len1 == 1 and len2 == 1:
+			sym1 = diff_syms1.name_to_sym[name]
+			sym2 = diff_syms2.name_to_sym[name]
+			if sym1.size != sym2.size:
+				changed += [ChangedSymbol(sym1, sym2)]
 
 	removed = []
 	for name in diff_syms1.name_to_sym.keys():

@@ -6,6 +6,7 @@ Input file:
 * https://unicode.org/Public/UCD/latest/ucdxml/ucd.nounihan.grouped.zip
 """
 
+
 import sys, re
 import logging
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
@@ -38,7 +39,7 @@ dm = {i:tuple(int(v, 16) for v in u['dm'].split()) for i,u in enumerate(ucd)
 ce = {i for i,u in enumerate(ucd) if u['Comp_Ex'] == 'Y'}
 
 assert not any(v for v in dm.values() if len(v) not in (1,2))
-dm1 = sorted(set(v for v in dm.values() if len(v) == 1))
+dm1 = sorted({v for v in dm.values() if len(v) == 1})
 assert all((v[0] >> 16) in (0,2) for v in dm1)
 dm1_p0_array = ['0x%04Xu' % (v[0] & 0xFFFF) for v in dm1 if (v[0] >> 16) == 0]
 dm1_p2_array = ['0x%04Xu' % (v[0] & 0xFFFF) for v in dm1 if (v[0] >> 16) == 2]
@@ -59,29 +60,26 @@ dm2_u64_array = ["HB_CODEPOINT_ENCODE3 (0x%04Xu, 0x%04Xu, 0x%04Xu)" % v[0] for v
 l = 1 + len(dm1_p0_array) + len(dm1_p2_array)
 dm2_order = {v[1]:i+l for i,v in enumerate(dm2)}
 
-dm_order = {None: 0}
-dm_order.update(dm1_order)
-dm_order.update(dm2_order)
-
-gc_order = dict()
+dm_order = {None: 0} | dm1_order | dm2_order
+gc_order = {}
 for i,v in enumerate(('Cc', 'Cf', 'Cn', 'Co', 'Cs', 'Ll', 'Lm', 'Lo', 'Lt', 'Lu',
                       'Mc', 'Me', 'Mn', 'Nd', 'Nl', 'No', 'Pc', 'Pd', 'Pe', 'Pf',
                       'Pi', 'Po', 'Ps', 'Sc', 'Sk', 'Sm', 'So', 'Zl', 'Zp', 'Zs',)):
     gc_order[i] = v
     gc_order[v] = i
 
-sc_order = dict()
+sc_order = {}
 sc_array = []
 sc_re = re.compile(r"\b(HB_SCRIPT_[_A-Z]*).*HB_TAG [(]'(.)','(.)','(.)','(.)'[)]")
 for line in open(hb_common_h):
-    m = sc_re.search (line)
-    if not m: continue
-    name = m.group(1)
-    tag = ''.join(m.group(i) for i in range(2, 6))
-    i = len(sc_array)
-    sc_order[tag] = i
-    sc_order[i] = tag
-    sc_array.append(name)
+	m = sc_re.search (line)
+	if not m: continue
+	name = m[1]
+	tag = ''.join(m[i] for i in range(2, 6))
+	i = len(sc_array)
+	sc_order[tag] = i
+	sc_order[i] = tag
+	sc_array.append(name)
 
 DEFAULT = 1
 COMPACT = 3

@@ -52,7 +52,7 @@ def cache(function):
     '''
     cache = {}
     def wrapper(*args):
-        if not args in cache:
+        if args not in cache:
             cache[args] = function()
         return cache[args]
     return wrapper
@@ -108,7 +108,7 @@ def mupdf_version():
         text = f.read()
     m = re.search('\n#define FZ_VERSION "([^"]+)"\n', text)
     assert m
-    base_version = m.group(1)
+    base_version = m[1]
 
     # If MUPDF_SETUP_VERSION exists, use it.
     #
@@ -264,9 +264,7 @@ def build():
     use_clang_python = get_flag('MUPDF_SETUP_USE_CLANG_PYTHON', not in_sdist())
     use_swig = get_flag('MUPDF_SETUP_USE_SWIG', True)
 
-    b = ''
-    if not windows():
-        b = 'm'     # Build C library.
+    b = '' if windows() else 'm'
     if use_clang_python:
         b += '0'    # Build C++ source.
     b += '1'        # Build C++ library (also contains C library on Windows).
@@ -306,10 +304,7 @@ def build():
                 '_mupdf.so',        # Python internals.
                 'mupdf.py',         # Python.
                 ]
-    paths = []
-    for name in names:
-        paths.append((f'{build_dir()}/{name}', name))
-
+    paths = [(f'{build_dir()}/{name}', name) for name in names]
     log(f'build(): returning: {paths}')
     return paths
 

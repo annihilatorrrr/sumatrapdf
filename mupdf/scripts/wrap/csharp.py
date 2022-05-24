@@ -127,7 +127,7 @@ def make_outparam_helper_csharp(
         if alt:
             write(f'mupdf.{util.rename.class_(alt.type.spelling)}')
         elif parse.is_pointer_to(type_, 'char'):
-            write( f'string')
+            write('string')
         else:
             text = cpp.declaration_text(type_, '').strip()
             if text == 'int16_t':           text = 'short'

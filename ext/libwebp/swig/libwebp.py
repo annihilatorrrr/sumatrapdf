@@ -51,20 +51,17 @@ except ImportError:
 def _swig_setattr_nondynamic(self, class_type, name, value, static=1):
     if (name == "thisown"):
         return self.this.own(value)
-    if (name == "this"):
-        if type(value).__name__ == 'SwigPyObject':
-            self.__dict__[name] = value
-            return
-    method = class_type.__swig_setmethods__.get(name, None)
-    if method:
+    if (name == "this") and type(value).__name__ == 'SwigPyObject':
+        self.__dict__[name] = value
+        return
+    if method := class_type.__swig_setmethods__.get(name, None):
         return method(self, value)
-    if (not static):
-        if _newclass:
-            object.__setattr__(self, name, value)
-        else:
-            self.__dict__[name] = value
+    if static:
+        raise AttributeError(f"You cannot add attributes to {self}")
+    if _newclass:
+        object.__setattr__(self, name, value)
     else:
-        raise AttributeError("You cannot add attributes to %s" % self)
+        self.__dict__[name] = value
 
 
 def _swig_setattr(self, class_type, name, value):
@@ -74,18 +71,17 @@ def _swig_setattr(self, class_type, name, value):
 def _swig_getattr(self, class_type, name):
     if (name == "thisown"):
         return self.this.own()
-    method = class_type.__swig_getmethods__.get(name, None)
-    if method:
+    if method := class_type.__swig_getmethods__.get(name, None):
         return method(self)
     raise AttributeError("'%s' object has no attribute '%s'" % (class_type.__name__, name))
 
 
 def _swig_repr(self):
     try:
-        strthis = "proxy of " + self.this.__repr__()
+        strthis = f"proxy of {self.this.__repr__()}"
     except __builtin__.Exception:
         strthis = ""
-    return "<%s.%s; %s >" % (self.__class__.__module__, self.__class__.__name__, strthis,)
+    return f"<{self.__class__.__module__}.{self.__class__.__name__}; {strthis} >"
 
 try:
     _object = object

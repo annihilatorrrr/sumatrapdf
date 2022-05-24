@@ -31,14 +31,14 @@ def dumpalpha():
 	print("static const Rune ucd_alpha2[] = {")
 	for a, b in table:
 		if b - a > 0:
-			print(hex(a)+","+hex(b)+",")
+			print(f"{hex(a)},{hex(b)},")
 	print("};");
 
 	print("")
 	print("static const Rune ucd_alpha1[] = {")
 	for a, b in table:
 		if b - a == 0:
-			print(hex(a)+",")
+			print(f"{hex(a)},")
 	print("};");
 
 def dumpmap(name, input):
@@ -58,17 +58,17 @@ def dumpmap(name, input):
 	table.append((start_a,prev_a,start_b))
 
 	print("")
-	print("static const Rune " + name + "2[] = {")
+	print(f"static const Rune {name}" + "2[] = {")
 	for a, b, n in table:
 		if b - a > 0:
-			print(hex(a)+","+hex(b)+","+str(n-a)+",")
+			print(f"{hex(a)},{hex(b)},{str(n-a)},")
 	print("};");
 
 	print("")
-	print("static const Rune " + name + "1[] = {")
+	print(f"static const Rune {name}" + "1[] = {")
 	for a, b, n in table:
 		if b - a == 0:
-			print(hex(a)+","+str(n-a)+",")
+			print(f"{hex(a)},{str(n-a)},")
 	print("};");
 
 print("/* This file was automatically created from UnicodeData.txt */")

@@ -68,7 +68,7 @@ class Rename:
         Name of wrapper function that calls C function <name>.
         '''
         if name.startswith( 'pdf_'):
-            return 'p' + name
+            return f'p{name}'
         ret = f'{clip( name, "fz_")}'
         if ret in ('stdin', 'stdout', 'stderr'):
             #log( 'appending underscore to {ret=}')

@@ -51,8 +51,7 @@ class TestData(object):
     data = collections.defaultdict(lambda: None)
     key=None
     for line in self.f:
-      heading = self.isSectionHeading(line)
-      if heading:
+      if heading := self.isSectionHeading(line):
         if data and heading == 'data':
           #Remove trailing newline
           data[key] = data[key][:-1]
@@ -68,10 +67,7 @@ class TestData(object):
   def isSectionHeading(self, line):
     """If the current heading is a test section heading return the heading,
     otherwise return False"""
-    if line.startswith("#"):
-      return line[1:].strip()
-    else:
-      return False
+    return line[1:].strip() if line.startswith("#") else False
 
   def normaliseOutput(self, data):
     # Remove trailing newlines

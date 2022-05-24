@@ -44,10 +44,8 @@ def Parse(data, level=0):
 
 	node = Node()
 	while data:
-		# skip blank lines, comments and whitespace at the beginning of a line
-		skip = re.match(r"(?:\s+|[#;].*)+", data)
-		if skip:
-			data = data[len(skip.group(0)):]
+		if skip := re.match(r"(?:\s+|[#;].*)+", data):
+			data = data[len(skip[0]):]
 			if not data:
 				break
 		# parse a single line into key, separator and value
@@ -84,7 +82,7 @@ def Parse(data, level=0):
 			# interpret INI style section headers as the names of top-level nodes
 			if level > 0:
 				return node, data
-			data = data[len(line.group(0)):]
+			data = data[len(line[0]):]
 			key = line.group(0).strip()[1:-1].strip()
 			subnode, data = Parse(data, level + 1)
 			node.data.append((key, subnode))
@@ -103,7 +101,7 @@ def Serialize(root, level=0):
 	result = []
 	for node in (root.data if type(root) is Node else root):
 		if type(node[1]) in [Node, list]:
-			result += ["\t" * level + (node[0] + " [" if node[0] else "[")]
+			result += ["\t" * level + (f"{node[0]} [" if node[0] else "[")]
 			result += Serialize(node[1], level + 1)
 			result += ["\t" * level + "]"]
 		elif type(node[1]) in [str, unicode]:

@@ -42,7 +42,7 @@ def print_cmap(filename, prologue, cmap):
 		if not line.endswith("usecmap"):
 			print(line, file=out)
 		if line == 'begincmap':
-			print("/"+common_name, "usecmap", file=out)
+			print(f"/{common_name}", "usecmap", file=out)
 	print(len(cmap), "begincidchar", file=out)
 	for line in sorted(cmap):
 		print(line, file=out)
@@ -50,10 +50,10 @@ def print_cmap(filename, prologue, cmap):
 		print(line, file=out)
 
 # Print common subset
-print_cmap(sys.argv[1], ["/CMapName /%s" % common_name], common)
+print_cmap(sys.argv[1], [f"/CMapName /{common_name}"], common)
 
 # Now find unique bits
 for f in sys.argv[2:]:
 	cmap = load_cmap_set(f) - common
 	prologue = load_cmap_prologue(f)
-	print_cmap(f+".shared", prologue, cmap)
+	print_cmap(f"{f}.shared", prologue, cmap)

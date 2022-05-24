@@ -43,8 +43,7 @@ def get_fz_extras( tu, fzname):
     '''
     fzname = util.clip( fzname, 'const ')
     fzname = util.clip( fzname, 'struct ')
-    ce = classes.classextras.get( tu, fzname)
-    return ce
+    return classes.classextras.get( tu, fzname)
 
 def get_field0( type_):
     '''
@@ -55,7 +54,7 @@ def get_field0( type_):
     for field in type_.get_fields():
         return field
 
-get_base_type_cache = dict()
+get_base_type_cache = {}
 def get_base_type( type_):
     '''
     Repeatedly dereferences pointer and returns the ultimate type.
@@ -92,10 +91,10 @@ def is_double_pointer( type_):
     type_ = type_.get_canonical()
     if type_.kind == clang.cindex.TypeKind.POINTER:
         type_ = type_.get_pointee().get_canonical()
-        if type_.kind == clang.cindex.TypeKind.POINTER:
-            return True
+    if type_.kind == clang.cindex.TypeKind.POINTER:
+        return True
 
-has_refs_cache = dict()
+has_refs_cache = {}
 def has_refs( tu, type_):
     '''
     Returns (offset, bits) if <type_> has a 'refs' member, otherwise False.
@@ -123,9 +122,9 @@ def has_refs( tu, type_):
             if key.startswith( prefix):
                 #jlib.log( 'Type is a fz_ or pdf_ struct: {key=}')
                 keep_name = f'{prefix}keep_{key[len(prefix):]}'
-                keep_fn_cursor = state.state_.find_function( tu, keep_name, method=False)
-                #jlib.log( '{keep_name=} {keep_fn_cursor=}')
-                if keep_fn_cursor:
+                if keep_fn_cursor := state.state_.find_function(
+                    tu, keep_name, method=False
+                ):
                     #jlib.log( 'There is a keep() fn for this type so it uses reference counting: {keep_name=}')
                     base_type_cursor = get_base_type( type_).get_declaration()
                     if base_type_cursor.is_definition():
@@ -140,17 +139,7 @@ def has_refs( tu, type_):
                             if name == 'storable' and type2.spelling == 'struct fz_storable':
                                 ret = 'storable.refs', 32
                                 break
-                    else:
-                        #jlib.log('Definition is not available for {key=}')
-                        pass
-
                     if not ret:
-                        if 0:
-                            jlib.log(
-                                    'Cannot find .refs member or we only have forward'
-                                    ' declaration, so have to hard-code the size and offset'
-                                    ' of the refs member.'
-                                    )
                         if base_type_cursor.is_definition():
                             if key == 'pdf_document':
                                 ret = 'super.refs', 32
@@ -163,29 +152,22 @@ def has_refs( tu, type_):
                                 return 'key_storable.storable.refs', 32
                             elif key == 'pdf_cmap':
                                 return 'storable.refs', 32
-                        else:
-                            #jlib.log( 'No defintion available, i.e. forward decl only.')
-                            if key == 'pdf_obj':
-                                ret = 0, 16
-                            elif key == 'fz_path':
-                                ret = 0, 8
-                            elif key in (
-                                    'fz_separations',
-                                    'fz_halftone',
-                                    'pdf_annot',
-                                    'pdf_graft_map',
-                                    ):
-                                # Forward decl, first member is 'int regs;'.
-                                return 0, 32
-                            elif key in (
-                                    'fz_display_list',
-                                    'fz_glyph',
-                                    'fz_jbig2_globals',
-                                    'pdf_function',
-                                    ):
-                                # Forward decl, first member is 'fz_storable storable;'.
-                                return 0, 32
-
+                        elif key == 'pdf_obj':
+                            ret = 0, 16
+                        elif key == 'fz_path':
+                            ret = 0, 8
+                        elif key in (
+                            'fz_separations',
+                            'fz_halftone',
+                            'pdf_annot',
+                            'pdf_graft_map',
+                            'fz_display_list',
+                            'fz_glyph',
+                            'fz_jbig2_globals',
+                            'pdf_function',
+                        ):
+                            # Forward decl, first member is 'int regs;'.
+                            return 0, 32
                         if ret is None:
                             # Need to hard-code info for this type.
                             assert 0, jlib.expand_nv(
@@ -239,9 +221,7 @@ def get_text( item, prefix, sep, *names):
     '''
     Returns text describing <names> elements of <item>.
     '''
-    ret = []
-    for name, value in get_list( item, *names):
-        ret.append( f'{name}={value}')
+    ret = [f'{name}={value}' for name, value in get_list( item, *names)]
     return prefix + sep.join( ret)
 
 class Clang6FnArgsBug( Exception):
@@ -289,17 +269,14 @@ class Arg:
         self.separator = separator
         self.alt = alt
         self.out_param = out_param
-        if name in ('in', 'is'):
-            self.name_python = f'{name}_'
-        else:
-            self.name_python = name
+        self.name_python = f'{name}_' if name in ('in', 'is') else name
         self.name_csharp = f'{name}_' if name in ('out', 'is', 'in', 'params') else name
 
     def __str__(self):
         return f'Arg(name={self.name} alt={"true" if self.alt else "false"} out_param={self.out_param})'
 
 
-get_args_cache = dict()
+get_args_cache = {}
 
 def get_args( tu, cursor, include_fz_context=False, skip_first_alt=False, verbose=False):
     '''
@@ -338,8 +315,6 @@ def get_args( tu, cursor, include_fz_context=False, skip_first_alt=False, verbos
                 # use internalContextGet() to get a context.
                 continue
             name = arg_cursor.mangled_name or f'arg_{i}'
-            if 0 and name == 'stmofsp':
-                verbose = True
             alt = None
             out_param = False
             base_type_cursor, base_typename, extras = get_extras( tu, arg_cursor.type)
@@ -348,15 +323,14 @@ def get_args( tu, cursor, include_fz_context=False, skip_first_alt=False, verbos
             if extras:
                 if verbose:
                     jlib.log( '{extras.opaque=} {base_type_cursor.kind=} {base_type_cursor.is_definition()=}')
-                if extras.opaque:
+                if (
+                    extras.opaque
+                    or base_type_cursor.kind
+                    == clang.cindex.CursorKind.STRUCT_DECL
+                ):
                     # E.g. we don't have access to defintion of fz_separation,
                     # but it is marked in classes.classextras with opaque=true,
                     # so there will be a wrapper class.
-                    alt = base_type_cursor
-                elif (1
-                        and base_type_cursor.kind == clang.cindex.CursorKind.STRUCT_DECL
-                        #and base_type_cursor.is_definition()
-                        ):
                     alt = base_type_cursor
             if verbose:
                 jlib.log( '{arg_cursor.type.spelling=} {base_typename=} {arg_cursor.type.kind=} {get_base_typename(arg_cursor.type)=}')
@@ -367,12 +341,7 @@ def get_args( tu, cursor, include_fz_context=False, skip_first_alt=False, verbos
                 if is_double_pointer( arg_cursor.type):
                     if verbose:
                         jlib.log( 'setting outparam: {cursor.spelling=} {arg_cursor.type=}')
-                    if cursor.spelling == 'pdf_clean_file':
-                        # Don't mark char** argv as out-param, which will also
-                        # allow us to tell swig to convert python lists into
-                        # (argc,char**) pair.
-                        pass
-                    else:
+                    if cursor.spelling != 'pdf_clean_file':
                         if verbose:
                             jlib.log('setting out_param to true')
                         out_param = True
@@ -390,9 +359,7 @@ def get_args( tu, cursor, include_fz_context=False, skip_first_alt=False, verbos
                 elif pointee.is_const_qualified():
                     if verbose:
                         jlib.log( 'is_const_qualified()')
-                elif pointee.spelling == 'FILE':
-                    pass
-                else:
+                elif pointee.spelling != 'FILE':
                     if verbose:
                         jlib.log( 'setting out_param = True')
                     out_param = True
@@ -409,8 +376,7 @@ def get_args( tu, cursor, include_fz_context=False, skip_first_alt=False, verbos
 
         get_args_cache[ key] = ret
 
-    for arg in ret:
-        yield arg
+    yield from ret
 
 
 def fn_has_struct_args( tu, cursor):
@@ -435,7 +401,7 @@ def get_first_arg( tu, cursor):
     return ret, n
 
 
-is_pointer_to_cache = dict()
+is_pointer_to_cache = {}
 
 def is_pointer_to( type_, destination, verbose=False):
     '''
@@ -471,7 +437,7 @@ def is_pointer_to( type_, destination, verbose=False):
             d = util.clip( d, 'struct ')
             if verbose:
                 jlib.log( '{destination!r=} {d!r=}')
-            ret = d == f'{destination} ' or d == f'const {destination} '
+            ret = d in [f'{destination} ', f'const {destination} ']
         is_pointer_to_cache[ key] = ret
 
     return ret
@@ -521,8 +487,8 @@ def find_wrappable_function_with_arg0_type_cache_populate( tu):
 
     t0 = time.time()
 
-    find_wrappable_function_with_arg0_type_cache = dict()
-    find_wrappable_function_with_arg0_type_excluded_cache = dict()
+    find_wrappable_function_with_arg0_type_cache = {}
+    find_wrappable_function_with_arg0_type_excluded_cache = {}
 
     for fnname, cursor in state.state_.find_functions_starting_with( tu, ('fz_', 'pdf_'), method=True):
 
@@ -547,14 +513,7 @@ def find_wrappable_function_with_arg0_type_cache_populate( tu):
             result_type = result_type.get_pointee().get_canonical()
         result_type = util.clip( result_type.spelling, 'struct ')
         if result_type.startswith( ('fz_', 'pdf_')):
-            result_type_extras = get_fz_extras( tu, result_type)
-            if not result_type_extras:
-                exclude_reasons.append(
-                        (
-                        MethodExcludeReason_NO_EXTRAS,
-                        f'no extras defined for result_type={result_type}',
-                        ))
-            else:
+            if result_type_extras := get_fz_extras(tu, result_type):
                 if not result_type_extras.constructor_raw:
                     exclude_reasons.append(
                             (
@@ -568,6 +527,12 @@ def find_wrappable_function_with_arg0_type_cache_populate( tu):
                                 f'wrapper for result_type={result_type} is not copyable.',
                             ))
 
+            else:
+                exclude_reasons.append(
+                        (
+                        MethodExcludeReason_NO_EXTRAS,
+                        f'no extras defined for result_type={result_type}',
+                        ))
         # Look at args
         #
         i = 0
@@ -607,16 +572,15 @@ def find_wrappable_function_with_arg0_type_cache_populate( tu):
             #if fnname == 'fz_load_outline':   # lgtm [py/unreachable-statement]
             if state.state_.show_details(fnname):
                 jlib.log( 'Excluding {fnname=} from possible class methods because:')
-                for i in exclude_reasons:
+                for _ in exclude_reasons:
                     jlib.log( '    {i}')
-        else:
-            if i > 0:
-                # <fnname> is ok to wrap.
-                arg0 = arg0_cursor.type.get_canonical().spelling
-                arg0 = util.clip( arg0, 'struct ')
+        elif i > 0:
+            # <fnname> is ok to wrap.
+            arg0 = arg0_cursor.type.get_canonical().spelling
+            arg0 = util.clip( arg0, 'struct ')
 
-                items = find_wrappable_function_with_arg0_type_cache.setdefault( arg0, [])
-                items.append( fnname)
+            items = find_wrappable_function_with_arg0_type_cache.setdefault( arg0, [])
+            items.append( fnname)
 
     jlib.logx( f'populating find_wrappable_function_with_arg0_type_cache took {time.time()-t0}s')
 
@@ -660,7 +624,7 @@ def find_struct( tu, structname, require_definition=True):
     structname = util.clip( structname, 'struct ')   # Remove any 'struct ' prefix.
     global find_struct_cache
     if find_struct_cache is None:
-        find_struct_cache = dict()
+        find_struct_cache = {}
         for cursor in tu.cursor.get_children():
             already = find_struct_cache.get( cursor.spelling)
             if already is None:
@@ -692,8 +656,7 @@ def find_name( cursor, name, nest=0):
         # We recurse into children directly.
         #
         for c in cursor.get_children():
-            ret = find_name_internal( c, name, nest+1)
-            if ret:
+            if ret := find_name_internal(c, name, nest + 1):
                 return ret
 
     d = name.find( '.')
@@ -708,8 +671,7 @@ def find_name( cursor, name, nest=0):
 
     for c in cursor.type.get_canonical().get_fields():
         if c.spelling == '':
-            ret = find_name( c, name, nest+1)
-            if ret:
+            if ret := find_name(c, name, nest + 1):
                 return ret
         if c.spelling == name:
             return c

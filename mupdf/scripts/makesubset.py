@@ -32,7 +32,7 @@ def load_table(fn):
 			for n in glyphs[u]:
 				table[n] = u
 				if do_small and is_small:
-					table[n+'.sc'] = u
+					table[f'{n}.sc'] = u
 		if u >= 128:
 			table['uni%04X'%u] = u
 			if do_small and is_small:
@@ -71,6 +71,5 @@ else:
 		smcp.sort()
 		print('\n\t'.join(smcp))
 	else:
-		list = list(table.keys())
-		list.sort()
+		list = sorted(table.keys())
 		print(','.join(list))

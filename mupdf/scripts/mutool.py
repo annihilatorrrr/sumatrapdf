@@ -67,35 +67,16 @@ def clean_usage():
     sys.exit(1)
 
 def clean(argv):
-    outfile = 'out.pdf'
     password = ''
     opts = mupdf.pdf_write_options()
-    print( 'opts.do_garbage=%s' % opts.do_garbage)
+    print(f'opts.do_garbage={opts.do_garbage}')
     opts.do_garbage += 1
-    print( 'opts.do_garbage=%s' % opts.do_garbage)
+    print(f'opts.do_garbage={opts.do_garbage}')
     errors = 0
     items, argv = getopt.getopt( argv, 'adfgilp:sczDAE:O:U:P:')
     for option, value in items:
-         print( f'option={option} value={value}')
-         if 0:   pass   # lgtm [py/unreachable-statement]
-         elif option == '-p': password = value
-         elif option == '-d': opts.do_decompress += 1
-         elif option == '-z': opts.do_compress += 1
-         elif option == '-f': opts.do_compress_fonts += 1
-         elif option == '-i': opts.do_compress_images += 1
-         elif option == '-a': opts.do_ascii += 1
-         elif option == '-g': opts.do_garbage += 1
-         elif option == '-l': opts.do_linear += 1
-         elif option == '-c': opts.do_clean += 1
-         elif option == '-s': opts.do_sanitize += 1
-         elif option == '-A': opts.do_appearance += 1
-         elif option == '-D': opts.do_encrypt = PDF_ENCRYPT_NONE
-         elif option == '-E': opts.do_encrypt = encrypt_method_from_string(value)
-         elif option == '-P': opts.permissions = int(value)
-         elif option == '-O': opts.opwd_utf8 = value[:128]
-         elif option == '-U': opts.upwd_utf8 = value[:128]
-         else:
-            clean_usage()
+        print( f'option={option} value={value}')
+        clean_usage()
 
     if (opts.do_ascii or opts.do_decompress) and not opts.do_compress:
         opts.do_pretty = 1
@@ -105,9 +86,7 @@ def clean(argv):
 
     infile = argv.pop(0)
 
-    if argv and '.pdf' in argv[0].lower():
-        outfile = argv.pop(0)
-
+    outfile = argv.pop(0) if argv and '.pdf' in argv[0].lower() else 'out.pdf'
     try:
         mupdf.ppdf_clean_file(infile, outfile, password, opts, argv)
     except Exception as e:
@@ -185,13 +164,6 @@ def convert_runrange( doc, count, range_, out):
             convert_runpage( doc, i, out)
 
 def convert( argv):
-    # input options
-    password = ''
-    alphabits = 8
-    layout_w = mupdf.FZ_DEFAULT_LAYOUT_W
-    layout_h = mupdf.FZ_DEFAULT_LAYOUT_H
-    layout_em = mupdf.FZ_DEFAULT_LAYOUT_EM
-    layout_css = None
     layout_use_doc_css = 1
 
     # output options
@@ -199,26 +171,19 @@ def convert( argv):
     format_ = None
     options = ''
 
+    layout_w = mupdf.FZ_DEFAULT_LAYOUT_W
+    layout_h = mupdf.FZ_DEFAULT_LAYOUT_H
+    layout_em = mupdf.FZ_DEFAULT_LAYOUT_EM
     items, argv = getopt.getopt( argv, 'p:A:W:H:S:U:Xo:F:O:')
     for option, value in items:
-        if 0: pass  # lgtm [py/unreachable-statement]
-        elif option == '-p':    password = value
-        elif option == '-A':    alphabits = int(value)
-        elif option == '-W':    layout_w = float( value)
-        elif option == '-H':    layout_h = float( value)
-        elif option == '-S':    layout_em = float( value)
-        elif option == '-U':    layout_css = value
-        elif option == '-X':    layout_use_doc_css = 0
-        elif option == '-o':    output = value
-        elif option == '-F':    format_ = value
-        elif option == '-O':    options = value
-        else:   assert 0
+        assert 0
 
     if not argv or (not format_ and not output):
         convert_usage()
 
+    alphabits = 8
     mupdf.set_aa_level( alphabits)
-    if layout_css:
+    if layout_css := None:
         buf = mupdf.Buffer( layout_css)
         mupdf.set_user_css( buf.string_from_buffer())
 
@@ -230,14 +195,12 @@ def convert( argv):
         out = mupdf.DocumentWriter( output, options, mupdf.DocumentWriter.OutputType_PDF)
 
     i = 0
-    while 1:
-        if i >= len( argv):
-            break
+    password = ''
+    while 1 and i < len(argv):
         arg = argv[i]
         doc = mupdf.Document( arg)
-        if doc.needs_password():
-            if not doc.authenticate_password( password):
-                raise Exception( f'cannot authenticate password: {arg}')
+        if doc.needs_password() and not doc.authenticate_password(password):
+            raise Exception( f'cannot authenticate password: {arg}')
         doc.layout_document( layout_w, layout_h, layout_em)
         count = doc.count_pages()
 
@@ -376,9 +339,4 @@ if __name__ == '__main__':
         e = main( sys.argv)
         sys.exit(e)
     except Exception as e:
-        if 0:   # Enable when debugging.
-            sys.stdout.flush()
-            sys.stderr.flush()
-            print(f'Exception: {e}')
-            sys.stdout.flush()
         raise

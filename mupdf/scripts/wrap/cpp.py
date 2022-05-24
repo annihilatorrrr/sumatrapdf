@@ -62,24 +62,6 @@ def declaration_text( type_, name, nest=0, name_is_simple=True, verbose=False, e
 
     if type_.get_result().spelling:
         jlib.log1( 'function: {type_.spelling=} {type_.kind=} {type_.get_result().spelling=} {type_.get_declaration().spelling=}')
-        # <type> is a function. We call ourselves with type=type_.get_result()
-        # and name=<name>(<args>).
-        #
-        if 0 and verbose:
-            nc = 0
-            for nci in type_.get_declaration().get_arguments():
-                nc += 1
-            nt = 0
-            for nti in type_.argument_types():
-                nt += 1
-            if nt == nc:
-                jlib.log( '*** {nt=} == {nc=}')
-            if nt != nc:
-                jlib.log( '*** {nt=} != {nc=}')
-
-        ret = ''
-        i = 0
-
         #for arg_cursor in type_.get_declaration().get_arguments():
         #    arg = arg_cursor
         try:
@@ -88,11 +70,11 @@ def declaration_text( type_, name, nest=0, name_is_simple=True, verbose=False, e
             if 'libclang-6' in clang_info().libclang_so:
                 raise Clang6FnArgsBug( f'type_.spelling is {type_.spelling}: {e!r}')
 
-        for arg in args:
+        ret = ''
+        for i, arg in enumerate(args):
             if i:
                 ret += ', '
             ret += declaration_text( arg, '', nest+1)
-            i += 1
         if verbose: jlib.log( '{ret!r=}')
         if not name_is_simple:
             # If name isn't a simple identifier, put it inside braces, e.g.
@@ -228,7 +210,7 @@ def make_fncall( tu, cursor, return_type, fncall, out):
     out.write( f'        std::cerr << __FILE__ << ":" << __LINE__ << ":" << __FUNCTION__ << "(): calling {cursor.mangled_name}():"')
     for arg in parse.get_args( tu, cursor, include_fz_context=True):
         if parse.is_pointer_to( arg.cursor.type, 'fz_context'):
-            out.write( f' << " auto_ctx=" << auto_ctx')
+            out.write(' << " auto_ctx=" << auto_ctx')
         elif arg.out_param:
             out.write( f' << " {arg.name}=" << (void*) {arg.name}')
         elif arg.alt:
@@ -318,7 +300,7 @@ class Generated:
             self.fn_usage_filename = None
             self.container_classnames = []
             self.to_string_structnames = []
-            self.fn_usage = dict()
+            self.fn_usage = {}
             self.output_param_fns = []
             self.c_functions = []
             self.c_globals = []
@@ -416,7 +398,7 @@ def make_outparam_helper(
             continue
         generated.swig_cpp.write(f'        {declaration_text(arg.cursor.type.get_pointee(), arg.name)};\n')
     return_void = (cursor.result_type.spelling == 'void')
-    generated.swig_cpp.write(f'        ')
+    generated.swig_cpp.write('        ')
     if not return_void:
         generated.swig_cpp.write(f'{declaration_text(cursor.result_type, "ret")} = ')
     generated.swig_cpp.write(f'{util.rename.function_call(cursor.mangled_name)}(')
@@ -503,7 +485,7 @@ def make_python_class_method_outparam_override(
     out.write( '    """\n')
 
     # ret, a, b, ... = foo::bar(self.m_internal, p, q, r, ...)
-    out.write(f'    ')
+    out.write('    ')
     sep = ''
     if cursor.result_type.spelling != 'void':
         out.write( 'ret')
@@ -515,7 +497,7 @@ def make_python_class_method_outparam_override(
         sep = ', '
     out.write( f' = {main_name}(')
     if structname:
-        out.write( f' self.m_internal')
+        out.write(' self.m_internal')
     for arg in parse.get_args( tu, cursor):
         if arg.out_param:
             continue
@@ -535,7 +517,7 @@ def make_python_class_method_outparam_override(
         if return_type:
             out.write( f'{return_type}(ret)')
         else:
-            out.write( f'ret')
+            out.write('ret')
         sep = ', '
     for arg in parse.get_args( tu, cursor):
         if not arg.out_param:
@@ -684,12 +666,11 @@ def function_wrapper(
         if parse.is_pointer_to(arg.cursor.type, 'fz_context'):
             continue
         if arg.out_param:
-            decl = ''
-            decl += '\n'
+            decl = '' + '\n'
             decl += '        #ifdef SWIG\n'
             decl += '            ' + declaration_text( arg.cursor.type, 'OUTPUT') + '\n'
             decl += '        #else\n'
-            decl += '            ' + declaration_text( arg.cursor.type, arg.name) + '\n'
+            decl += f'            {declaration_text(arg.cursor.type, arg.name)}' + '\n'
             decl += '        #endif\n'
             decl += '        '
         else:
@@ -1297,14 +1278,14 @@ def class_find_constructor_fns( tu, classname, struct_name, base_name, extras):
     extras:
         .
     '''
-    assert struct_name == f'fz_{base_name}' or struct_name == f'pdf_{base_name}'
+    assert struct_name in [f'fz_{base_name}', f'pdf_{base_name}']
     constructor_fns = []
     if '-' not in extras.constructor_prefixes:
         # Add default constructor fn prefix.
         if struct_name.startswith( 'fz_'):
-            extras.constructor_prefixes.insert( 0, f'fz_new_')
+            extras.constructor_prefixes.insert(0, 'fz_new_')
         elif struct_name.startswith( 'pdf_'):
-            extras.constructor_prefixes.insert( 0, f'pdf_new_')
+            extras.constructor_prefixes.insert(0, 'pdf_new_')
     for fnprefix in extras.constructor_prefixes:
         for fnname, cursor in state.state_.find_functions_starting_with( tu, fnprefix, method=True):
             # Check whether this has identical signature to any fn we've
@@ -1377,13 +1358,12 @@ def class_find_destructor_fns( tu, struct_name, base_name):
             elif not arg_context and parse.is_pointer_to( arg.cursor.type, 'fz_context'):
                 arg_context = True
             args_num += 1
-        if arg_struct:
-            if args_num == 1 or (args_num == 2 and arg_context):
-                # No params other than <struct>* and fz_context* so this is
-                # candidate destructor.
-                #log( 'adding candidate destructor: {fnname}')
-                fnname = util.rename.function( fnname)
-                destructor_fns.append( (fnname, cursor))
+        if arg_struct and (args_num == 1 or (args_num == 2 and arg_context)):
+            # No params other than <struct>* and fz_context* so this is
+            # candidate destructor.
+            #log( 'adding candidate destructor: {fnname}')
+            fnname = util.rename.function( fnname)
+            destructor_fns.append( (fnname, cursor))
 
     destructor_fns.sort()
     return destructor_fns
@@ -1446,11 +1426,7 @@ def class_copy_constructor(
         out_h.write( f'    FZ_FUNCTION {classname}(const {classname}& rhs);\n')
         out_h.write( '\n')
 
-        cast = ''
-        if pvoid:
-            # Need to cast the void* to the correct type.
-            cast = f'({struct_name}*) '
-
+        cast = f'({struct_name}*) ' if pvoid else ''
         out_cpp.write( f'/** {comment} */\n')
         out_cpp.write( f'FZ_FUNCTION {classname}::{classname}(const {classname}& rhs)\n')
         out_cpp.write( f': m_internal({cast}{util.rename.function_call(keep_name)}(rhs.m_internal))\n')

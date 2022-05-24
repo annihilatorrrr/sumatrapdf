@@ -340,11 +340,7 @@ def gettime():
 
 
 def has_percent_d(s):
-    # find '%[0-9]*d' */
-    m = re.search( '%[0-9]*d', s)
-    if m:
-        return 1
-    return 0
+    return 1 if (m := re.search( '%[0-9]*d', s)) else 0
 
 
 
@@ -386,8 +382,6 @@ def file_level_trailers():
 
 def drawband( page, list_, ctm, tbounds, cookie, band_start, pix):
 
-    bit = None
-
     if pix.alpha():
         pix.clear_pixmap()
     else:
@@ -410,9 +404,14 @@ def drawband( page, list_, ctm, tbounds, cookie, band_start, pix):
     if state.gamma_value != 1:
         pix.gamma_pixmap( state.gamma_value)
 
-    if ((state.output_format == OUT_PCL or state.output_format == OUT_PWG) and state.out_cs == CS_MONO) or (state.output_format == OUT_PBM) or (state.output_format == OUT_PKM):
-        bit = mupdf.Bitmap( pix, mupdf.Halftone(), band_start)
-    return bit
+    return (
+        mupdf.Bitmap(pix, mupdf.Halftone(), band_start)
+        if state.output_format in [OUT_PCL, OUT_PWG]
+        and state.out_cs == CS_MONO
+        or state.output_format == OUT_PBM
+        or state.output_format == OUT_PKM
+        else None
+    )
 
 
 

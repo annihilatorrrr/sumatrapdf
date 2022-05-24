@@ -15,8 +15,7 @@ class CustomSdistCommand(sdist):
     def run(self):
         try:
             import shutil
-            shutil.copyfile('.libs/' + _name_of_lib,
-                'python/gumbo/' + _name_of_lib)
+            shutil.copyfile(f'.libs/{_name_of_lib}', f'python/gumbo/{_name_of_lib}')
             sdist.run(self)
         except IOError as e:
             print(e)

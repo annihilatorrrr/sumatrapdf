@@ -23,7 +23,7 @@ stat = 0
 
 for soname in ['harfbuzz', 'harfbuzz-subset', 'harfbuzz-icu', 'harfbuzz-gobject']:
 	for suffix in ['so', 'dylib']:
-		so = os.path.join (builddir, libs, 'lib%s.%s' % (soname, suffix))
+		so = os.path.join(builddir, libs, f'lib{soname}.{suffix}')
 		if not os.path.exists (so): continue
 
 		# On macOS, C symbols are prefixed with _
@@ -41,26 +41,26 @@ for soname in ['harfbuzz', 'harfbuzz-subset', 'harfbuzz-icu', 'harfbuzz-gobject'
 
 		prefix = (symprefix + os.path.basename (so)).replace ('libharfbuzz', 'hb').replace ('-', '_').split ('.')[0]
 
-		print ('Checking that %s does not expose internal symbols' % so)
-		suspicious_symbols = [x for x in EXPORTED_SYMBOLS if not re.match (r'^%s(_|$)' % prefix, x)]
-		if suspicious_symbols:
+		print(f'Checking that {so} does not expose internal symbols')
+		if suspicious_symbols := [
+		    x for x in EXPORTED_SYMBOLS if not re.match(f'^{prefix}(_|$)', x)
+		]:
 			print ('Ouch, internal symbols exposed:', suspicious_symbols)
 			stat = 1
 
-		def_path = os.path.join (builddir, soname + '.def')
+		def_path = os.path.join(builddir, f'{soname}.def')
 		if not os.path.exists (def_path):
 			print ('\'%s\' not found; skipping' % def_path)
 		else:
-			print ('Checking that %s has the same symbol list as %s' % (so, def_path))
+			print(f'Checking that {so} has the same symbol list as {def_path}')
 			with open (def_path, 'r', encoding='utf-8') as f: def_file = f.read ()
-			diff_result = list (difflib.context_diff (
-				def_file.splitlines (),
-				['EXPORTS'] + [re.sub ('^%shb' % symprefix, 'hb', x) for x in EXPORTED_SYMBOLS] +
-					# cheat: copy the last line from the def file!
-					[def_file.splitlines ()[-1]]
-			))
-
-			if diff_result:
+			if diff_result := list(
+			    difflib.context_diff(
+			        def_file.splitlines(),
+			        (['EXPORTS'] +
+			         [re.sub(f'^{symprefix}hb', 'hb', x)
+			          for x in EXPORTED_SYMBOLS] + [def_file.splitlines()[-1]]),
+			    )):
 				print ('\n'.join (diff_result))
 				stat = 1
 

@@ -83,11 +83,7 @@ def make_tag(py_version=None):
     #
     tag_python = ''.join(py_version.split('.')[:2])
 
-    # Final tag is, for example, 'py39-none-win32', 'py39-none-win_amd64'
-    # or 'py38-none-openbsd_6_8_amd64'.
-    #
-    tag = f'cp{tag_python}-none-{tag_platform}'
-    return tag
+    return f'cp{tag_python}-none-{tag_platform}'
 
 
 # We keep track of all the venv's we have created so that we can avoid
@@ -137,17 +133,19 @@ def venv_run(
     if windows():
         # Run under cmd.exe with all commands inside "...".
         pre = [
-                f'cmd.exe /c "{"cd "+directory if directory else "true"}',
-                f'{py} -m venv {venv}',
-                f'{venv}\\Scripts\\activate.bat',
-                ]
-        post = [f'deactivate"']
+            f"""cmd.exe /c "{f'cd {directory}' if directory else 'true'}""",
+            f'{py} -m venv {venv}',
+            f'{venv}\\Scripts\\activate.bat',
+        ]
+
+        post = ['deactivate"']
     else:
         pre = [
-                f'{"cd "+directory if directory else "true"}',
-                f'{py} -m venv {venv}',
-                f'. {venv}/bin/activate',
-                ]
+            f"{f'cd {directory}' if directory else 'true'}",
+            f'{py} -m venv {venv}',
+            f'. {venv}/bin/activate',
+        ]
+
         post = [f'deactivate']
 
     if clean or venv not in venv_installed:
@@ -169,18 +167,12 @@ def venv_run(
                 commands0 = pre + post
                 command0 = '&&'.join(commands0)
                 log(f'Running pre-install of pip: {command0}')
-                e = system(command0, raise_errors=False, prefix=prefix)
-                if e:
+                if e := system(command0, raise_errors=False, prefix=prefix):
                     log(f'[Ignoring error from dummy run of pip install on Windows.]')
 
     commands = pre + commands + post
 
-    if windows():
-        # Spaces mess things up on Windows.
-        command = '&&'.join(commands)
-    else:
-        command = ' && '.join(commands)
-
+    command = '&&'.join(commands) if windows() else ' && '.join(commands)
     return system(
             command,
             raise_errors=raise_errors,
@@ -194,10 +186,7 @@ def check_sdist(sdist):
     '''
     Checks sdist with 'twine check'.
     '''
-    venv_run([
-            f'pip install twine',
-            f'twine check {sdist}',
-            ])
+    venv_run(['pip install twine', f'twine check {sdist}'])
 
 
 def check_wheel(wheel):
@@ -206,11 +195,7 @@ def check_wheel(wheel):
     '''
     # We don't install and use check-wheel-contents, because it thinks
     # top-level .dll files are incorrect.
-    venv_run([
-            f'pip install twine',
-            #f'check-wheel-contents {wheel}',
-            f'twine check {wheel}',
-            ])
+    venv_run(['pip install twine', f'twine check {wheel}'])
 
 
 def find_new_file(pattern, t):
@@ -225,7 +210,7 @@ def find_new_file(pattern, t):
         if tt >= t:
             paths_new.append(path)
 
-    if len(paths_new) == 0:
+    if not paths_new:
         raise Exception(f'No new file found matching glob: {pattern}')
     elif len(paths_new) > 1:
         text = 'More than one file found matching glob: {pattern}\n'
@@ -509,14 +494,12 @@ def make_windows(
         t = time.time()
         log(f'*** Running venv_run() with directory={directory} os.getcwd()={os.getcwd()}')
         venv_run(
-                [
-                f'pwd',
-                f'python setup.py -d {out_dir2} bdist_wheel',
-                ],
-                py=py,
-                directory=directory,
-                prefix=f'{python_version}-{cpu} wheel build: ',
-                )
+            ['pwd', f'python setup.py -d {out_dir2} bdist_wheel'],
+            py=py,
+            directory=directory,
+            prefix=f'{python_version}-{cpu} wheel build: ',
+        )
+
         wheel = find_new_file(f'{out_dir}/*.whl', t)
         check_wheel(wheel)
         wheels.append(wheel)
@@ -563,7 +546,7 @@ def test_local(test_command, wheels, py):
             )
     m = re.search('tag: (.+)', text)
     assert m, f'Failed to find expected tag: ... in output text: {text!r}'
-    tag = m.group(1).strip()    # Sometimes we get \r at end, so remove it here.
+    tag = m[1].strip()
     log(f'Looking for wheel matching tag {tag!r}')
     for wheel in wheels:
         name, version, py_, none, cpu = parse_wheel(wheel)
@@ -582,7 +565,10 @@ def test_local(test_command, wheels, py):
 
 
 def test_pypi(test_command, package_name, pypi_test, py):
-    assert package_name, f'Cannot test installation from pypi.org because no package name specified.'
+    assert (
+        package_name
+    ), 'Cannot test installation from pypi.org because no package name specified.'
+
     pip_install_arg = ''
     if pypi_test:
         pip_install_arg += '-i https://test.pypi.org/simple '
@@ -625,8 +611,8 @@ def test(test_command, package_name, wheels, abis, pypi, pypi_test, py):
                 else:
                     test_local(test_command, wheels, py)
         else:
-            assert pypi, f'No wheels specified; need to use *pypi.org.'
-            assert package_name, f'No wheels specified; need package_name.'
+            assert pypi, 'No wheels specified; need to use *pypi.org.'
+            assert package_name, 'No wheels specified; need package_name.'
             # Test with each ABI.
             for abi in abis:
                 cpu, python_version, py = windows_python_from_abi(abi)
@@ -662,7 +648,7 @@ def parse_remote(remote):
     '''
     m = re.match('^(([^@]+@))?([^:]+):(.*)$', remote)
     assert m, f'Expected [<user>@]<hostname>:[<directory>] but: {remote!r}'
-    user, host, directory = m.group(1), m.group(3), m.group(4)
+    user, host, directory = m[1], m[3], m[4]
     if user is None:
         user = ''
     if directory is None:
@@ -678,12 +664,12 @@ def wheels_for_sdist(sdist, outdir):
     '''
     m = re.match('^([^-]+)-([^-]+)[.]tar.gz$', os.path.basename(sdist))
     assert m, f'Bad sdist name, expected .../<name>-<version>.tar.gz: {sdist!r}'
-    name_version = f'{m.group(1)}-{m.group(2)}-'
-    ret = []
-    for i in os.listdir(outdir):
-        if i.startswith(name_version) and i.endswith('.whl'):
-            ret.append(os.path.join(outdir, i))
-    return ret
+    name_version = f'{m[1]}-{m[2]}-'
+    return [
+        os.path.join(outdir, i)
+        for i in os.listdir(outdir)
+        if i.startswith(name_version) and i.endswith('.whl')
+    ]
 
 
 def parse_sdist(sdist):
@@ -692,13 +678,13 @@ def parse_sdist(sdist):
     '''
     m = re.match('^([^-]+)-([^-]+)[.]tar.gz$', os.path.basename(sdist))
     assert m, f'Unable to parse sdist: {sdist!r}'
-    return m.group(1), m.group(2)
+    return m[1], m[2]
 
 
 def parse_wheel(wheel):
     m = re.match('^([^-]+)-([^-]+)-([^-]+)-([^-]+)-([^-]+)[.]whl$', os.path.basename(wheel))
     assert m, f'Cannot parse wheel path: {wheel}'
-    name, version, py, none, cpu = m.group(1), m.group(2), m.group(3), m.group(4), m.group(5)
+    name, version, py, none, cpu = m[1], m[2], m[3], m[4], m[5]
     return name, version, py, none, cpu
 
 

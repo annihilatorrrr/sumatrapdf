@@ -74,7 +74,7 @@ def get_latest_version(url):
 
 def v2fhelper(v, suff, version, weight):
     parts = v.split(suff)
-    if 2 != len(parts):
+    if len(parts) != 2:
         return v
     version[4] = weight
     version[5] = parts[1]
@@ -91,7 +91,7 @@ def version2float(v):
         1  # Pre or (default) final
     ]
     parts = v.split("pre")
-    if 2 == len(parts):
+    if len(parts) == 2:
         version[6] = 0
         v = parts[0]
 
@@ -122,10 +122,10 @@ def ProgramVersionGreater(ver1, ver2):
 
 def verify_version_not_lower(myver, curr1, curr2):
     if curr1 != None and ProgramVersionGreater(curr1, myver):
-        print("version you gave is less than sumpdf-latest.txt (%s < %s)" % (myver, curr1))
+        print(f"version you gave is less than sumpdf-latest.txt ({myver} < {curr1})")
         sys.exit(1)
     if curr2 != None and ProgramVersionGreater(curr2, myver):
-        print("version you gave is less than sumpdf-latest.txt (%s < %s)" % (myver, curr2))
+        print(f"version you gave is less than sumpdf-latest.txt ({myver} < {curr2})")
         sys.exit(1)
 
 

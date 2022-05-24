@@ -61,7 +61,7 @@ class CtypesTest(unittest.TestCase):
       self.assertEquals('Test', text_node.text)
 
   def testBufferThatGoesAway(self):
-    for i in range(10):
+    for _ in range(10):
       source = StringIO.StringIO('<foo bar=quux>1<p>2</foo>')
       parse_tree = gumboc.parse(source.read())
       source.close()

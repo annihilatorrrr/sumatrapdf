@@ -23,13 +23,13 @@ tested = False
 # harfbuzz-icu links to libstdc++ because icu does.
 for soname in ['harfbuzz', 'harfbuzz-subset', 'harfbuzz-gobject']:
 	for suffix in ['so', 'dylib']:
-		so = os.path.join (libs, 'lib%s.%s' % (soname, suffix))
+		so = os.path.join(libs, f'lib{soname}.{suffix}')
 		if not os.path.exists (so): continue
 
-		print ('Checking that we are not linking to libstdc++ or libc++ in %s' % so)
+		print(f'Checking that we are not linking to libstdc++ or libc++ in {so}')
 		ldd_result = subprocess.check_output (ldd + [so])
 		if (b'libstdc++' in ldd_result) or (b'libc++' in ldd_result):
-			print ('Ouch, %s is linked to libstdc++ or libc++' % so)
+			print(f'Ouch, {so} is linked to libstdc++ or libc++')
 			stat = 1
 
 		tested = True

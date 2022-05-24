@@ -983,11 +983,11 @@ def find_python( cpu, version=None):
         m = re.match( '^ *-([0-9.]+)-((64)|(32)) +([^\\r*]+)[\\r*]*$', line)
         if not m:
             continue
-        version2 = m.group(1)
-        bits = int(m.group(2))
+        version2 = m[1]
+        bits = int(m[2])
         if bits != cpu.bits or version2 != version:
             continue
-        path = m.group(5).strip()
+        path = m[5].strip()
         root = path[ :path.rfind('\\')]
         if not os.path.exists(path):
             # Sometimes it seems that the specified .../python.exe does not exist,
@@ -1571,7 +1571,7 @@ def make_docs( build_dirs, languages):
         dname = f'{name}.doxygen'
         dname2 = os.path.join( outdir, dname)
         jlib.system( f'cd {outdir}; rm -f {dname}0; doxygen -g {dname}0', out='return')
-        with open( dname2+'0') as f:
+        with open(f'{dname2}0') as f:
             dtext = f.read()
         dtext, n = re.subn( '\nPROJECT_NAME *=.*\n', f'\nPROJECT_NAME = {name}\n', dtext)
         assert n == 1

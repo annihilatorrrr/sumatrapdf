@@ -116,7 +116,7 @@ def createTypeEnum(list, type, default):
 	return unTab(Template_Enumeration % (type, ",\n	".join([", ".join(part) for part in parts])))
 
 def createFastSelector(fullList, nameList, funcName, type):
-	cases = ["case %s:" % value for (name, value) in fullList if name in nameList]
+	cases = [f"case {value}:" for (name, value) in fullList if name in nameList]
 	return unTab(Template_Selector % (funcName, type, "\n	".join([" ".join(part) for part in util.group(cases, 4)])))
 
 ########## HTML tags and attributes ##########
@@ -147,9 +147,8 @@ List_MathML2_Entities = [("DoubleDot", 168), ("OverBar", 175), ("PlusMinus", 177
 
 from htmlentitydefs import entitydefs
 entitydefs['apos'] = "'" # only XML entity that isn't an HTML entity as well
-List_HTML_Entities = []
-for name, value in entitydefs.items():
-	List_HTML_Entities.append((name, value[2:-1] or str(ord(value))))
+List_HTML_Entities = [(name, value[2:-1] or str(ord(value)))
+                      for name, value in entitydefs.items()]
 for (name, value) in List_MathML2_Entities:
 	assert name not in entitydefs
 	List_HTML_Entities.append((name, str(value)))
@@ -219,7 +218,8 @@ def main():
 	attrs = [(name, getEnumName(name, "Attr")) for name in sorted(List_HTML_Attrs.split() + List_Other_Attrs.split())]
 	aligns = [(name, getEnumName(name, "Align")) for name in sorted(List_Align_Values.split())]
 	cssProps = [(name, getEnumName(name, "Css")) for name in sorted(List_CSS_Props.split())]
-	cssColors = [(name, "MKRGB(%s)" % value) for (name, value) in sorted(List_CSS_Colors)]
+	cssColors = [(name, f"MKRGB({value})")
+	             for (name, value) in sorted(List_CSS_Colors)]
 
 	enum_htmltag = createTypeEnum(tags, "HtmlTag", "Tag_NotFound")
 	enum_htmlattr = createTypeEnum(attrs, "HtmlAttr", "Attr_NotFound")

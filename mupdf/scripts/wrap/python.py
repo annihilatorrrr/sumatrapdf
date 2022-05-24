@@ -28,7 +28,7 @@ def make_outparam_helper_python(
     generated.swig_python.write(f'    """\n')
     generated.swig_python.write(f'    Wrapper for out-params of {cursor.mangled_name}().\n')
     sep = ''
-    generated.swig_python.write(f'    Returns: ')
+    generated.swig_python.write('    Returns: ')
     sep = ''
     if not return_void:
         generated.swig_python.write( f'{cursor.result_type.spelling}')
@@ -48,10 +48,10 @@ def make_outparam_helper_python(
         generated.swig_python.write(f'{sep}{arg.name_python}')
         sep = ', '
     generated.swig_python.write(f'{sep}outparams)\n')
-    generated.swig_python.write(f'    return ')
+    generated.swig_python.write('    return ')
     sep = ''
     if not return_void:
-        generated.swig_python.write(f'ret')
+        generated.swig_python.write('ret')
         sep = ', '
     for arg in parse.get_args( tu, cursor):
         if arg.out_param:

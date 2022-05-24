@@ -14,17 +14,14 @@ tag_sizes = open_and_write_header('src/tag_sizes.h', '//')
 tag_py = open_and_write_header('python/gumbo/gumboc_tags.py', '#')
 tag_py.write('TagNames = [\n')
 
-tagfile = open(sys.argv[1])
-
-for tag in tagfile:
-    tag = tag.strip()
-    tag_upper = tag.upper().replace('-', '_')
-    tag_strings.write('"%s",\n' % tag)
-    tag_enum.write('GUMBO_TAG_%s,\n' % tag_upper)
-    tag_sizes.write('%d, ' % len(tag))
-    tag_py.write('  "%s",\n' % tag_upper)
-
-tagfile.close()
+with open(sys.argv[1]) as tagfile:
+  for tag in tagfile:
+      tag = tag.strip()
+      tag_upper = tag.upper().replace('-', '_')
+      tag_strings.write('"%s",\n' % tag)
+      tag_enum.write('GUMBO_TAG_%s,\n' % tag_upper)
+      tag_sizes.write('%d, ' % len(tag))
+      tag_py.write('  "%s",\n' % tag_upper)
 
 tag_strings.close()
 tag_enum.close()

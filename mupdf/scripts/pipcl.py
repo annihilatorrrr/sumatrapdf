@@ -134,7 +134,7 @@ class Package:
         '''
         self.name = name
         self.version = version
-        self.root_sep = os.path.abspath(root if root else os.getcwd()) + os.sep
+        self.root_sep = os.path.abspath(root or os.getcwd()) + os.sep
         self.summary = summary
         self.description = description
         self.classifiers = classifiers
@@ -318,8 +318,7 @@ class Package:
         '''
         if not self.fn_clean:
             return
-        paths = self.fn_clean(all_)
-        if paths:
+        if paths := self.fn_clean(all_):
             if isinstance(paths, str):
                 paths = paths,
             for path in paths:
@@ -334,10 +333,7 @@ class Package:
         '''
         Called by handle_argv().
         '''
-        items = []
-        if self.fn_build:
-            items = self.fn_build()
-
+        items = self.fn_build() if self.fn_build else []
         # We install to the first item in site.getsitepackages()[] that exists.
         #
         sitepackages_all = site.getsitepackages()
@@ -365,7 +361,7 @@ class Package:
             with open(record_path, 'w') as f:
                 f.write(record.get())
 
-        _log(f'argv_install(): Finished.')
+        _log('argv_install(): Finished.')
 
 
     def argv_dist_info(self, egg_base):
@@ -620,10 +616,7 @@ class Package:
 
         Assert-fails if path is not within self.root_sep.
         '''
-        if os.path.isabs(path):
-            p = path
-        else:
-            p = os.path.join(self.root_sep, path)
+        p = path if os.path.isabs(path) else os.path.join(self.root_sep, path)
         p = os.path.realpath(os.path.abspath(p))
         assert p.startswith(self.root_sep), f'Path not within root={self.root_sep}: {path}'
         p_rel = os.path.relpath(p, self.root_sep)
@@ -669,7 +662,7 @@ def git_items( directory, submodules=False):
 
     We run a 'git ls-files' command internally.
     '''
-    command = 'cd ' + directory + ' && git ls-files'
+    command = f'cd {directory} && git ls-files'
     if submodules:
         command += ' --recurse-submodules'
     text = subprocess.check_output( command, shell=True)
@@ -692,7 +685,7 @@ def parse_pkg_info(path):
     '''
     Parses a PKJG-INFO file, each line is '<key>: <value>\n'. Returns a dict.
     '''
-    ret = dict()
+    ret = {}
     with open(path) as f:
         for line in f:
             s = line.find(': ')

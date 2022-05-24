@@ -65,9 +65,8 @@ def dump_table(name, table):
 	rev = []
 	i = 0
 	for u in table:
-		if u in glyphs:
-			if u >= 128:
-				rev += ['{0x%04x,%d},' % (u, i)]
+		if u in glyphs and u >= 128:
+			rev += ['{0x%04x,%d},' % (u, i)]
 		i = i + 1
 	rev.sort()
 

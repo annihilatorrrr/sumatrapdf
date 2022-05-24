@@ -17,6 +17,7 @@ Requirements:
         python -m pip install cppyy
 '''
 
+
 import ctypes
 import os
 import re
@@ -64,9 +65,8 @@ cppyy.include('mupdf/fitz.h')
 path = f'{mupdf_dir}/include/mupdf/fitz/version.h'
 with open(path) as f:
     for line in f:
-        m = re.match('^#define FZ_VERSION "(.*)"$', line)
-        if m:
-            cppyy.gbl.mupdf.FZ_VERSION = m.group(1)
+        if m := re.match('^#define FZ_VERSION "(.*)"$', line):
+            cppyy.gbl.mupdf.FZ_VERSION = m[1]
             break
     else:
         raise Exception(f'Unable to find FZ_VERSION in {path}')
@@ -151,15 +151,12 @@ cppyy.gbl.mupdf.new_test_device = _new_test_device
 # buffer for the output string so isn't useful for Python code.)
 #
 def _format_output_path(format, page):
-    m = re.search( '(%[0-9]*d)', format)
-    if m:
-        ret = format[ :m.start(1)] + str(page) + format[ m.end(1):]
-    else:
-        dot = format.rfind( '.')
-        if dot < 0:
-            dot = len( format)
-        ret = format[:dot] + str(page) + format[dot:]
-    return ret
+    if m := re.search('(%[0-9]*d)', format):
+        return format[ :m.start(1)] + str(page) + format[ m.end(1):]
+    dot = format.rfind( '.')
+    if dot < 0:
+        dot = len( format)
+    return format[:dot] + str(page) + format[dot:]
 cppyy.gbl.mupdf.format_output_path = _format_output_path
 
 # Override cppyy.gbl.mupdf.Pixmap.n and cppyy.gbl.mupdf.Pixmap.alpha so

@@ -57,7 +57,7 @@ def main():
         stdin = child.stdout
     else:
         stdin = sys.stdin
-    
+
     openbsd = os.uname()[0] == 'OpenBSD'
     n = None
     segv = 0
@@ -66,26 +66,10 @@ def main():
     for line in stdin:
         if out_raw:
             out_raw.write(line)
-        m = re.match('^Memory squeezing @ ([0-9]+)( complete)?', line)
-        if m:
-            if not m.group(2):
-                # Start of squeeze.
-                
-                if 0 and not openbsd:
-                    # Looks like memento's forked processes might terminate
-                    # before they get to output the 'Memory squeezing @ <N>
-                    # complete' line.
-                    #
-                    assert n is None, f'n={n} line={line!r}'
-                
-                n = int(m.group(1))
-                if n >= quiet_next:
-                    sys.stdout.write(f'quiet_next={quiet_next!r} n={n!r}: {line}')
-                    sys.stdout.flush()
-                    quiet_next = (n + quiet) // quiet * quiet
-            else:
+        if m := re.match('^Memory squeezing @ ([0-9]+)( complete)?', line):
+            if m[2]:
                 # End of squeeze.
-                assert n == int(m.group(1))
+                assert n == int(m[1])
                 # Output info about any failure:
                 if segv or leaks:
                     print(f'Failure at squeeze {n}: segv={segv} leaks={leaks}:')
@@ -99,13 +83,18 @@ def main():
                 segv = 0
                 leaks = 0
                 n = None
-        else:
-            if n is not None:
-                lines.append(line)
-                if line.startswith('SEGV at:'):
-                    segv = 1
-                if line.startswith('Allocated blocks'):
-                    leaks = 1
+            else:
+                n = int(m[1])
+                if n >= quiet_next:
+                    sys.stdout.write(f'quiet_next={quiet_next!r} n={n!r}: {line}')
+                    sys.stdout.flush()
+                    quiet_next = (n + quiet) // quiet * quiet
+        elif n is not None:
+            lines.append(line)
+            if line.startswith('SEGV at:'):
+                segv = 1
+            if line.startswith('Allocated blocks'):
+                leaks = 1
 
 
 if __name__ == '__main__':

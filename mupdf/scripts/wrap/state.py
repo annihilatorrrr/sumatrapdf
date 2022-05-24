@@ -95,7 +95,7 @@ class ClangInfo:
                 return
             clang_bin = clang_bin[0]
             self.clang_version = version
-            libclang_so = glob.glob( f'/usr/local/lib/libclang.so*')
+            libclang_so = glob.glob('/usr/local/lib/libclang.so*')
             assert len(libclang_so) == 1
             self.libclang_so = libclang_so[0]
             self.resource_dir = jlib.system(
@@ -126,7 +126,7 @@ class ClangInfo:
                 if version == 10:
                     m = re.search( '\nlibraries: =(.+)\n', clang_search_dirs)
                     assert m
-                    clang_search_dirs = m.group(1)
+                    clang_search_dirs = m[1]
                 clang_search_dirs = clang_search_dirs.strip().split(':')
                 for i in ['/usr/lib', '/usr/local/lib'] + clang_search_dirs:
                     for leaf in f'libclang-{version}.*so*', f'libclang.so.{version}.*':
@@ -168,12 +168,12 @@ class State:
         self.have_done_build_0 = False
 
         # Maps from <tu> to dict of fnname: cursor.
-        self.functions_cache = dict()
+        self.functions_cache = {}
 
         # Maps from <tu> to dict of dataname: cursor.
-        self.global_data = dict()
+        self.global_data = {}
 
-        self.enums = dict()
+        self.enums = {}
 
         # Code should show extra information if state_.show_details(name)
         # returns true.
@@ -183,14 +183,14 @@ class State:
     def functions_cache_populate( self, tu):
         if tu in self.functions_cache:
             return
-        fns = dict()
-        global_data = dict()
-        enums = dict()
+        fns = {}
+        global_data = {}
+        enums = {}
 
         for cursor in tu.cursor.get_children():
             if cursor.kind==clang.cindex.CursorKind.ENUM_DECL:
                 #jlib.log('ENUM_DECL: {cursor.spelling=}')
-                enum_values = list()
+                enum_values = []
                 for cursor2 in cursor.get_children():
                     #jlib.log('    {cursor2.spelling=}')
                     name = cursor2.spelling
@@ -333,8 +333,10 @@ class BuildDirs:
 
         # Assume we are in mupdf/scripts/.
         file_ = abspath( __file__)
-        assert file_.endswith( f'/scripts/wrap/state.py'), \
-                'Unexpected __file__=%s file_=%s' % (__file__, file_)
+        assert file_.endswith(
+            '/scripts/wrap/state.py'
+        ), f'Unexpected __file__={__file__} file_={file_}'
+
         dir_mupdf = abspath( f'{file_}/../../../')
         assert not dir_mupdf.endswith( '/')
 
@@ -359,13 +361,8 @@ class BuildDirs:
         dir_so = abspath( dir_so)
         self.dir_so = dir_so
 
-        if 0: pass  # lgtm [py/unreachable-statement]
-        elif '-debug' in dir_so:    self.cpp_flags = '-g'
-        elif '-release' in dir_so:  self.cpp_flags = '-O2 -DNDEBUG'
-        elif '-memento' in dir_so:  self.cpp_flags = '-g -DMEMENTO'
-        else:
-            self.cpp_flags = None
-            jlib.log( 'Warning: unrecognised {dir_so=}, so cannot determine cpp_flags')
+        self.cpp_flags = None
+        jlib.log( 'Warning: unrecognised {dir_so=}, so cannot determine cpp_flags')
 
         # Set self.cpu and self.python_version.
         if state_.windows:
@@ -373,9 +370,9 @@ class BuildDirs:
             m = re.match( 'shared-([a-z]+)(-(x[0-9]+))?(-py([0-9.]+))?$', os.path.basename(self.dir_so))
             #log(f'self.dir_so={self.dir_so} {os.path.basename(self.dir_so)} m={m}')
             assert m, f'Failed to parse dir_so={self.dir_so!r} - should be *-x32|x64-pyA.B'
-            self.cpu = Cpu( m.group(3))
-            self.python_version = m.group(5)
-            #log('{self.cpu=} {self.python_version=} {dir_so=}')
+            self.cpu = Cpu(m[3])
+            self.python_version = m[5]
+                #log('{self.cpu=} {self.python_version=} {dir_so=}')
         else:
             # Use Python we are running under.
             self.cpu = Cpu(cpu_name())

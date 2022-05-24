@@ -18,7 +18,7 @@ headers = [[f.readline (), f.readline ()] for f in files]
 while files[0].readline ().find ('##################') < 0:
 	pass
 
-def read (f):
+def read(f):
 	mapping = {}
 	for line in f:
 
@@ -32,11 +32,7 @@ def read (f):
 
 		uu = fields[0].split ('..')
 		start = int (uu[0], 16)
-		if len (uu) == 1:
-			end = start
-		else:
-			end = int (uu[1], 16)
-
+		end = start if len (uu) == 1 else int (uu[1], 16)
 		t = fields[1]
 
 		for u in range (start, end + 1):
@@ -61,7 +57,7 @@ def read_joining_uu (f):
 
 	return sorted (values)
 
-def print_has_arabic_joining (scripts, joining_uu):
+def print_has_arabic_joining(scripts, joining_uu):
 
 	print ("static bool")
 	print ("has_arabic_joining (hb_script_t script)")
@@ -71,7 +67,7 @@ def print_has_arabic_joining (scripts, joining_uu):
 	print ("  {")
 
 	for script in sorted ({scripts[u] for u in joining_uu if scripts[u] not in {'Common', 'Inherited'}}):
-		print ("    case HB_SCRIPT_{}:".format (script.upper ()))
+		print(f"    case HB_SCRIPT_{script.upper()}:")
 
 	print ("      return true;")
 	print ()
@@ -91,7 +87,7 @@ print (" * on files with these headers:")
 print (" *")
 for h in headers:
 	for l in h:
-		print (" * %s" % (l.strip ()))
+		print(f" * {l.strip()}")
 print (" */")
 print ()
 print ("#ifndef HB_OT_SHAPE_COMPLEX_ARABIC_JOINING_LIST_HH")

@@ -59,15 +59,9 @@ def prefix_str(indent): return "  " * indent
 def field_val_as_str(field):
     assert isinstance(field, Field)
     if field.is_bool():
-        if field.val:
-            return "true"
-        else:
-            return "false"
+        return "true" if field.val else "false"
     if field.is_color():
-        if field.val > 0xffffff:
-            return "#%08x" % field.val
-        else:
-            return "#%06x" % field.val
+        return "#%08x" % field.val if field.val > 0xffffff else "#%06x" % field.val
     if field.is_signed() or field.is_unsigned() or field.is_float():
         return str(field.val)
     if field.is_string():
@@ -76,14 +70,11 @@ def field_val_as_str(field):
 
 def _field_def_val_for_FieldMetada(field):
     if field.is_struct() or field.is_array():
-        return "&g%sMetadata" % field.typ.name()
+        return f"&g{field.typ.name()}Metadata"
     if field.is_bool():
         return ["0", "1"][field.val]
     if field.is_color():
-        if field.val > 0xffffff:
-            return "0x%08x" % field.val
-        else:
-            return "0x%06x" % field.val
+        return "0x%08x" % field.val if field.val > 0xffffff else "0x%06x" % field.val
     # Note: doesn't handle default values outside of uintptr_t range,
     # which is 32bits on 32-bit arch
     if field.is_signed():
@@ -102,7 +93,7 @@ def _field_def_val_for_FieldMetada(field):
 
 def field_def_val_for_FieldMetada(field):
     s = _field_def_val_for_FieldMetada(field)
-    s = "(uintptr_t)" + s
+    s = f"(uintptr_t){s}"
     return s
 
 def escape_char(c):
@@ -111,17 +102,13 @@ def escape_char(c):
     if c in "[]":
         return g_escape_char + c
     if c == '\r':
-        return g_escape_char + 'r'
+        return f'{g_escape_char}r'
     if c == '\n':
-        return g_escape_char + 'n'
+        return f'{g_escape_char}n'
     return c
 
 def escape_str(s):
-    if 0 == g_escape_char: return s
-    res = ""
-    for c in s:
-        res += escape_char(c)
-    return res
+    return s if g_escape_char == 0 else "".join(escape_char(c) for c in s)
 
 def ser_field(field, lines, indent):
     val_str = field_val_as_str(field)
@@ -130,26 +117,26 @@ def ser_field(field, lines, indent):
     val_str = escape_str(val_str)
     var_name = name2name(field.name)
     prefix = prefix_str(indent)
-    lines += ["%s%s: %s" % (prefix, var_name, val_str)]
+    lines += [f"{prefix}{var_name}: {val_str}"]
 
 def ser_array(field, lines, indent):
     assert field.is_array()
 
     n = len(field.val.values)
-    if 0 == n: return
+    if n == 0: return
 
     prefix = prefix_str(indent)
     var_name = name2name(field.name)
-    lines += ["%s%s [" % (prefix, var_name)]
+    lines += [f"{prefix}{var_name} ["]
     prefix += "  "
     for val in field.val.values:
         #print(str(val))
         #print(val.as_str())
-        lines += [prefix + "["]
+        lines += [f"{prefix}["]
         ser_struct(val, None, lines, indent + 1)
-        lines += [prefix + "]"]
+        lines += [f"{prefix}]"]
     prefix = prefix[:-2]
-    lines += ["%s]" % prefix]
+    lines += [f"{prefix}]"]
 
 def ser_struct_compact(struct, name, lines, indent):
     assert struct.is_struct()
@@ -168,7 +155,7 @@ def ser_struct(struct, name, lines, indent):
     #print("name: %s, indent: %d, prefix: '%s'" % (name, indent, prefix))
 
     if name is not None:
-        lines += ["%s%s [" % (prefix, name2name(name))]
+        lines += [f"{prefix}{name2name(name)} ["]
 
     for field in struct.values:
         if field.is_no_store():
@@ -184,8 +171,6 @@ def ser_struct(struct, name, lines, indent):
 
         if field.is_struct():
             if field.val.offset == 0:
-                if False:  # Note: this omits empty values
-                    lines += ["%s%s: " % (prefix, name2name(field.name))]
                 continue
             ser_struct(field.val, field.name, lines, indent + 1)
             continue
@@ -193,7 +178,7 @@ def ser_struct(struct, name, lines, indent):
         ser_field(field, lines, indent + 1)
 
     if name is not None:
-        lines += ["%s]" % prefix]
+        lines += [f"{prefix}]"]
 
 def gen_struct_def(stru_cls):
     name = stru_cls.__name__
@@ -201,7 +186,11 @@ def gen_struct_def(stru_cls):
     rows = [[field.c_type(), field.name] for field in stru_cls.fields]
     if g_with_reflection:
         rows = [["const StructMetadata *", "def"]] + rows
-    lines += ["    %s  %s;" % (e1, e2) for (e1, e2) in util.fmt_rows(rows, [util.FMT_RIGHT])]
+    lines += [
+        f"    {e1}  {e2};"
+        for (e1, e2) in util.fmt_rows(rows, [util.FMT_RIGHT])
+    ]
+
     lines += ["};\n"]
     return "\n".join(lines)
 
@@ -276,10 +265,10 @@ def gen_struct_fields_txt(stru_cls):
     for field in stru_cls.fields:
         assert isinstance(field, Field)
         typ_enum = field.get_typ_enum()
-        offset = "of(%s, %s)" % (struct_name, field.name)
+        offset = f"of({struct_name}, {field.name})"
         stru_cls.field_names.add(name2name(field.name))
         val = field_def_val_for_FieldMetada(field)
-        col = [offset + ",", typ_enum + ",", val]
+        col = [f"{offset},", f"{typ_enum},", val]
         rows.append(col)
     rows = util.fmt_rows(rows, [util.FMT_RIGHT, util.FMT_RIGHT, util.FMT_RIGHT])
     lines += ["    { %s %s %s }," % (e1, e2, e3) for (e1, e2, e3) in rows]
@@ -300,7 +289,7 @@ def gen_structs_metadata_txt(structs):
         stru_cls.field_names = util.SeqStrings()
         struct_name = stru_cls.__name__
         nFields = len(stru_cls.fields)
-        fields = "&g%sFieldMetadata[0]" % struct_name
+        fields = f"&g{struct_name}FieldMetadata[0]"
         lines += gen_struct_fields_txt(stru_cls)
         field_names = stru_cls.field_names.get_all_c_escaped()
         lines += ["""const StructMetadata g%(struct_name)sMetadata = {
@@ -340,19 +329,13 @@ def _gen_for_top_level_vals(top_level_vals, file_path):
     for v in top_level_vals:
         structs_from_top_level_value_rec(v, structs)
 
-    prototypes = ""
-    for v in top_level_vals:
-        prototypes += gen_prototypes(v.__class__)
-
+    prototypes = "".join(gen_prototypes(v.__class__) for v in top_level_vals)
     struct_defs = gen_struct_defs(structs)
     structs_metadata = gen_structs_metadata_txt(structs)
-    top_level_funcs = ""
-    for v in top_level_vals:
-        top_level_funcs += gen_top_level_funcs_txt(v)
-
+    top_level_funcs = "".join(gen_top_level_funcs_txt(v) for v in top_level_vals)
     file_name = os.path.basename(file_path)
-    write_to_file(file_path + ".h", h_txt_tmpl % locals())
-    write_to_file(file_path + ".cpp", cpp_txt_tmpl % locals())
+    write_to_file(f"{file_path}.h", h_txt_tmpl % locals())
+    write_to_file(f"{file_path}.cpp", cpp_txt_tmpl % locals())
 
 def gen_for_top_level_vals(top_level_vals, file_path):
     # TODO: if element, wrap in a list
@@ -363,8 +346,7 @@ def gen_for_top_level_vals(top_level_vals, file_path):
 # where whitespace at end is significant. For that to work all
 # string field names must have "str" in them. This is only for testing
 def add_random_ws(s):
-    if "str" in s: return s
-    return s + " " * random.randint(1, 4)
+    return s if "str" in s else s + " " * random.randint(1, 4)
 
 def gen_txt_for_top_level_val(top_level_val, file_path):
     lines = []
@@ -375,7 +357,7 @@ def gen_txt_for_top_level_val(top_level_val, file_path):
         new_lines = []
         for l in lines:
             # add empty lines to test resilience of the parser
-            if 1 == random.randint(1, 3):
+            if random.randint(1, 3) == 1:
                 new_lines.append(add_random_ws(" "))
             new_lines.append(add_random_ws(l))
         lines = new_lines

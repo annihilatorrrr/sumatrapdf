@@ -128,18 +128,6 @@ class MainWindow(PyQt5.QtWidgets.QMainWindow):
         modifiers = PyQt5.QtWidgets.QApplication.keyboardModifiers()
         #print(f'modifiers={modifiers}')
         shift = (modifiers == PyQt5.QtCore.Qt.ShiftModifier)
-        if 0:
-            pass
-        elif shift and event.key() == PyQt5.Qt.Qt.Key_PageUp:
-            self.goto_page(page_number=self.page_number - 1)
-        elif shift and event.key() == PyQt5.Qt.Qt.Key_PageDown:
-            self.goto_page(page_number=self.page_number + 1)
-        elif event.key() in (ord('='), ord('+')):
-            self.goto_page(zoom=self.zoom + 1)
-        elif event.key() in (ord('-'), ord('_')):
-            self.goto_page(zoom=self.zoom - 1)
-        elif event.key() == (ord('0')):
-            self.goto_page(zoom=0)
 
     def resizeEvent(self, event):
         self.goto_page(self.page_number, self.zoom)

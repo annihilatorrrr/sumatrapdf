@@ -14,7 +14,9 @@ stat = 0
 for x in HBHEADERS:
 	with open (x, 'r', encoding='utf-8') as f: content = f.read ()
 	if ('HB_BEGIN_DECLS' not in content) or ('HB_END_DECLS' not in content):
-		print ('Ouch, file %s does not have HB_BEGIN_DECLS / HB_END_DECLS, but it should' % x)
+		print(
+		    f'Ouch, file {x} does not have HB_BEGIN_DECLS / HB_END_DECLS, but it should'
+		)
 		stat = 1
 
 for x in HBSOURCES:

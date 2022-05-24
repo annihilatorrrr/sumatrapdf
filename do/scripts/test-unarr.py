@@ -33,10 +33,7 @@ def should_test_file(f):
         ".tar", ".cbt"
     ]
     f = f.lower()
-    for ext in exts:
-        if f.endswith(ext):
-            return True
-    return False
+    return any(f.endswith(ext) for ext in exts)
 
 
 files_tested = 0
@@ -46,9 +43,7 @@ fo = None
 # Apparently shell argument to Popen it must be False on unix/mac and True
 # on windows
 def shell_arg():
-    if os.name == "nt":
-        return True
-    return False
+    return os.name == "nt"
 
 
 def subprocess_flags():
@@ -166,9 +161,7 @@ def dump_failures():
 
 
 def errors_to_sorted_array(errors):
-    a = []
-    for (err, count) in errors.items():
-        a.append([count, err])
+    a = [[count, err] for (err, count) in errors.items()]
     return sorted(a, cmp=lambda x,y: cmp(y[0], x[0]))
 
 
@@ -192,11 +185,9 @@ def copy_file_here(f, n, m):
 
 
 def get_all_files(files, n):
-    m = 1
-    for f in files:
+    for m, f in enumerate(files, start=1):
         print(" %6d %s" % (f[0], f[1]))
         copy_file_here(f[1], n, m)
-        m += 1
 
 
 def show_files(files):
@@ -208,9 +199,8 @@ def show_files(files):
 
 def print_errors(arr, error_to_files):
     global g_get_files, g_show_files
-    n = 1
     total = 0
-    for el in arr:
+    for n, el in enumerate(arr, start=1):
         print("%s: %d" % (el[1], el[0]))
         files = get_files_for_error(error_to_files, el[1])
         total += el[0]
@@ -218,7 +208,6 @@ def print_errors(arr, error_to_files):
             show_files(files)
         if g_get_files:
             get_all_files(files, n)
-        n += 1
     print("\nTotal: %d" % total)
 
 
@@ -230,37 +219,34 @@ def extract_file_path(l):
 
 
 def do_summary_on_file(path):
-    fo = open(path, "r")
-    errors = {}  # map error string to number of failures
-    error_to_files = {}
-    seen_error = False
-    file_path = None
-    for l in fo:
-        l = l.strip()
-        if "failed with out" in l:
-            file_path = extract_file_path(l)
-        if l == "err:":
-            seen_error = False
-            continue
-        if seen_error:
-            continue
-        if not l.startswith("!"):
-            continue
-        seen_error = True
-        if file_path is not None and os.path.exists(file_path):
-            errors[l] = errors.get(l, 0) + 1
-            a = error_to_files.get(l, [])
-            a.append(file_path)
-            error_to_files[l] = a
-    fo.close()
+    with open(path, "r") as fo:
+        errors = {}  # map error string to number of failures
+        error_to_files = {}
+        seen_error = False
+        file_path = None
+        for l in fo:
+            l = l.strip()
+            if "failed with out" in l:
+                file_path = extract_file_path(l)
+            if l == "err:":
+                seen_error = False
+                continue
+            if seen_error:
+                continue
+            if not l.startswith("!"):
+                continue
+            seen_error = True
+            if file_path is not None and os.path.exists(file_path):
+                errors[l] = errors.get(l, 0) + 1
+                a = error_to_files.get(l, [])
+                a.append(file_path)
+                error_to_files[l] = a
     arr = errors_to_sorted_array(errors)
     print_errors(arr, error_to_files)
 
 
 def do_summary():
-    fn = "unarr_failed.txt"
-    if len(sys.argv) > 2:
-        fn = sys.argv[2]
+    fn = sys.argv[2] if len(sys.argv) > 2 else "unarr_failed.txt"
     do_summary_on_file(fn)
 
 
@@ -286,10 +272,9 @@ def main():
 
     if len(sys.argv) != 2:
         usage_and_exit()
-    fo = open("unarr_failed.txt", "w")
-    test_unarr(sys.argv[1])
-    dump_failures()
-    fo.close()
+    with open("unarr_failed.txt", "w") as fo:
+        test_unarr(sys.argv[1])
+        dump_failures()
 
 
 if __name__ == "__main__":

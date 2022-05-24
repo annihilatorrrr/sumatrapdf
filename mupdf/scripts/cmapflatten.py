@@ -20,9 +20,7 @@ def flattencmap(filename):
 	map = {}
 
 	def tocode(s):
-		if s[0] == '<' and s[-1] == '>':
-			return int(s[1:-1], 16)
-		return int(s, 10)
+		return int(s[1:-1], 16) if s[0] == '<' and s[-1] == '>' else int(s, 10)
 
 	def map_cidchar(lo, v):
 		map[lo] = v

@@ -98,8 +98,7 @@ def _add_next_prev_pointers(soup):
     yield node
     try:
       for child in node.contents:
-        for descendant in _traverse(child):
-          yield descendant
+        yield from _traverse(child)
     except AttributeError:
       # Not an element.
       return
