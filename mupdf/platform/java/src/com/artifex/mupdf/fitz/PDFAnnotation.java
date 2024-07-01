@@ -1,4 +1,4 @@
-// Copyright (C) 2004-2023 Artifex Software, Inc.
+// Copyright (C) 2004-2024 Artifex Software, Inc.
 //
 // This file is part of MuPDF.
 //
@@ -280,6 +280,10 @@ public class PDFAnnotation
 	public native boolean hasIcon();
 	public native String getIcon();
 	public native void setIcon(String icon);
+
+	public native boolean hasPopup();
+	public native Rect getPopup();
+	public native void setPopup(Rect rect);
 
 	public native boolean hasOpen();
 	public native boolean getIsOpen();

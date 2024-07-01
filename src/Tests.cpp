@@ -8,6 +8,7 @@
 #include "wingui/UIModels.h"
 
 #include "Settings.h"
+#include "DocProperties.h"
 #include "DocController.h"
 #include "EngineBase.h"
 #include "EngineAll.h"
@@ -45,7 +46,7 @@ void TestRenderPage(const Flags& i) {
             printf("failed to render page\n");
         }
         delete bmp;
-        delete engine;
+        engine->Release();
     }
 }
 
@@ -54,7 +55,7 @@ static void extractPageText(EngineBase* engine, int pageNo) {
     if (!pageText.text) {
         return;
     }
-    AutoFreeWstr uni = str::Replace(pageText.text, L"\n", L"_");
+    AutoFreeWStr uni = str::Replace(pageText.text, L"\n", L"_");
     auto uniA = ToUtf8Temp(uni);
     printf("text on page %d: '", pageNo);
     // print characters as hex because I don't know what kind of locale-specific mangling
@@ -95,6 +96,6 @@ void TestExtractPage(const Flags& ci) {
             extractPageText(engine, pageNo);
         }
 
-        delete engine;
+        engine->Release();
     }
 }

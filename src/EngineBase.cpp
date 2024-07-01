@@ -13,22 +13,6 @@
 
 #include "utils/Log.h"
 
-bool IsExternalUrl(const WCHAR* url) {
-    return str::StartsWithI(url, L"http://") || str::StartsWithI(url, L"https://") || str::StartsWithI(url, L"mailto:");
-}
-
-bool IsExternalUrl(const char* url) {
-    return str::StartsWithI(url, "http://") || str::StartsWithI(url, "https://") || str::StartsWithI(url, "mailto:");
-}
-
-void FreePageText(PageText* pageText) {
-    str::Free(pageText->text);
-    free((void*)pageText->coords);
-    pageText->text = nullptr;
-    pageText->coords = nullptr;
-    pageText->len = 0;
-}
-
 Kind kindPageElementDest = "dest";
 Kind kindPageElementImage = "image";
 Kind kindPageElementComment = "comment";
@@ -54,6 +38,22 @@ static Kind destKinds[] = {
     kindDestinationMupdf
 };
 // clang-format on
+
+bool IsExternalUrl(const WCHAR* url) {
+    return str::StartsWithI(url, L"http://") || str::StartsWithI(url, L"https://") || str::StartsWithI(url, L"mailto:");
+}
+
+bool IsExternalUrl(const char* url) {
+    return str::StartsWithI(url, "http://") || str::StartsWithI(url, "https://") || str::StartsWithI(url, "mailto:");
+}
+
+void FreePageText(PageText* pageText) {
+    str::Free(pageText->text);
+    free((void*)pageText->coords);
+    pageText->text = nullptr;
+    pageText->coords = nullptr;
+    pageText->len = 0;
+}
 
 PageDestination::~PageDestination() {
     free(value);
@@ -248,13 +248,13 @@ bool TocTree::IsChecked(TreeItem ti) {
 }
 
 void TocTree::SetHandle(TreeItem ti, HTREEITEM hItem) {
-    CrashIf(ti < 0);
+    ReportIf(ti < 0);
     TocItem* tocItem = (TocItem*)ti;
     tocItem->hItem = hItem;
 }
 
 HTREEITEM TocTree::GetHandle(TreeItem ti) {
-    CrashIf(ti < 0);
+    ReportIf(ti < 0);
     TocItem* tocItem = (TocItem*)ti;
     return tocItem->hItem;
 }
@@ -314,13 +314,25 @@ RenderPageArgs::RenderPageArgs(int pageNo, float zoom, int rotation, RectF* page
     this->cookie_out = cookie_out;
 }
 
+int EngineBase::AddRef() {
+    return refCount.Add();
+}
+
+bool EngineBase::Release() {
+    if (refCount.Dec()) {
+        delete this;
+        return true;
+    }
+    return false;
+}
+
 EngineBase::~EngineBase() {
     str::Free(decryptionKey);
     str::Free(defaultExt);
 }
 
 int EngineBase::PageCount() const {
-    CrashIf(pageCount < 0);
+    ReportIf(pageCount < 0);
     return pageCount;
 }
 
@@ -355,6 +367,20 @@ bool EngineBase::HasToc() {
 
 TocTree* EngineBase::GetToc() {
     return nullptr;
+}
+
+// default implementation that just sets wanted keys
+void EngineBase::GetProperties(const StrVec&, StrVec&) {
+#if 0
+    for (auto& key : keys) {
+        TempStr val = GetPropertyTemp(key);
+        if (!val) {
+            continue;
+        }
+        keyValueOut.Append(key);
+        keyValueOut.Append(val);
+    }
+#endif
 }
 
 bool EngineBase::HasPageLabels() const {

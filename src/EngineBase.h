@@ -120,7 +120,7 @@ struct PageDestinationURL : IPageDestination {
     PageDestinationURL() = delete;
 
     PageDestinationURL(const char* u) {
-        CrashIf(!u);
+        ReportIf(!u);
         kind = kindDestinationLaunchURL;
         url = str::Dup(u);
     }
@@ -141,7 +141,7 @@ struct PageDestinationFile : IPageDestination {
     PageDestinationFile() = delete;
 
     PageDestinationFile(const char* u, const char* dest) {
-        CrashIf(!u);
+        ReportIf(!u);
         kind = kindDestinationLaunchFile;
         path = str::Dup(u);
         dest = str::Dup(dest);
@@ -208,7 +208,6 @@ struct IPageElement {
     }
 
     // string value associated with this element (e.g. displayed in an infotip)
-    // caller must free() the result
     virtual char* GetValue() {
         return nullptr;
     }
@@ -402,6 +401,7 @@ struct RenderPageArgs {
 class EngineBase {
   public:
     Kind kind = nullptr;
+    AtomicRefCount refCount;
     // the default file extension for a document like
     // the currently loaded one (e.g. L".pdf")
     const char* defaultExt = nullptr;
@@ -418,9 +418,12 @@ class EngineBase {
     // TODO: migrate other engines to use this
     AutoFreeStr fileNameBase;
 
-    virtual ~EngineBase();
     // creates a clone of this engine (e.g. for printing on a different thread)
     virtual EngineBase* Clone() = 0;
+
+    int AddRef();
+    // return true if deleted the object
+    bool Release();
 
     // number of pages the loaded document contains
     int PageCount() const;
@@ -461,7 +464,12 @@ class EngineBase {
     bool IsImageCollection() const;
 
     // access to various document properties (such as Author, Title, etc.)
-    virtual TempStr GetPropertyTemp(DocumentProperty prop) = 0;
+    virtual TempStr GetPropertyTemp(const char* name) = 0;
+
+    // keys are names of properties the caller wants. If given, we append those
+    // proerties in this order and potentially add more
+    // if keys are empty, we put them in order we want
+    virtual void GetProperties(const StrVec& keys, StrVec& keyValOut);
 
     // TODO: needs a more general interface
     // whether it is allowed to print the current document
@@ -526,6 +534,9 @@ class EngineBase {
 
     // protected:
     void SetFilePath(const char* s);
+
+  protected:
+    virtual ~EngineBase();
 };
 
 struct PasswordUI {

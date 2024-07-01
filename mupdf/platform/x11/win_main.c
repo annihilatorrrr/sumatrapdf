@@ -1,4 +1,4 @@
-// Copyright (C) 2004-2021 Artifex Software, Inc.
+// Copyright (C) 2004-2024 Artifex Software, Inc.
 //
 // This file is part of MuPDF.
 //
@@ -40,10 +40,6 @@
 
 #ifndef WM_MOUSEWHEEL
 #define WM_MOUSEWHEEL 0x020A
-#endif
-
-#ifndef PATH_MAX
-#define PATH_MAX 4096
 #endif
 
 #define MIN(x,y) ((x) < (y) ? (x) : (y))
