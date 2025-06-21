@@ -1,4 +1,4 @@
-package main
+package do
 
 import (
 	"archive/zip"
@@ -82,13 +82,13 @@ func createPdbLzsa(dir string) error {
 }
 
 // build, sign, upload latest pre-release build
-func buildSignAndUploadLatestPreRelease() {
+func buildSignAndUploadPreRelease() {
 	if !isGithubMyMasterBranch() {
-		logf("buildSignAndUploadLatestPreRelease: skipping build because not on master branch\n")
+		logf("buildSignAndUploadPreRelease: skipping build because not on master branch\n")
 		return
 	}
 	ver := getPreReleaseVer()
-	logf("buildSignAndUploadLatestPreRelease: ver: %s\n", ver)
+	logf("buildSignAndUploadPreRelease: ver: %s\n", ver)
 	isClean := isGitClean(".")
 	if !isClean {
 		logf("will not upload because git is not clean\n")
@@ -97,6 +97,7 @@ func buildSignAndUploadLatestPreRelease() {
 	verifyBuildNotInStorageMust(newMinioBackblazeClient(), buildTypePreRel, ver)
 
 	detectSigntoolPathMust()
+	detectMakeAppxPathMust()
 	genHTMLDocsForApp()
 
 	setBuildConfigPreRelease()
@@ -150,15 +151,22 @@ func buildSignAndUploadLatestPreRelease() {
 		build(plat)
 	}
 
+	makeAppxTempMust(dirDst)
+	// test building msix before signing
+	buildAppxMust(dirDst, false)
+
 	// sign all files in one swoop
 	// build can take a long time and signing rquires user interaction
 	// so wait for user to press enter
-	waitForEnter("\nPress enter to sign the builds")
+	waitForEnter("\nPress enter to sign and upload the builds")
 	err := signExesInDir(dirDst)
 	if err != nil {
 		os.RemoveAll(dirDst)
 		must(err)
 	}
+
+	copyExeToAppxTempMust(dirDst)
+	buildAppxMust(dirDst, true)
 
 	// create SumatraPDF-{prefix}.zip with SumatraPDF-{prefix}.exe inside
 	// this must happen after signing
@@ -175,9 +183,9 @@ func buildSignAndUploadLatestPreRelease() {
 	createManifestMust(manifestPath)
 
 	if !isClean {
+		logf("buildSignAndUploadPreRelease: will skip upload because git is not clean\n")
 		uploadDryRun = true
 	}
-	waitForEnter("\nPress enter to upload the builds")
 	uploadToStorage(buildTypePreRel, ver, dirDst)
 }
 
